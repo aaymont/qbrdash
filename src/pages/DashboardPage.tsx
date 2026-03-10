@@ -162,6 +162,11 @@ export function DashboardPage() {
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Geotab QBR Insights — {client.friendlyName}
+            {typeof __APP_VERSION__ !== "undefined" && (
+              <Box component="span" sx={{ ml: 0.5, fontSize: "0.75em", opacity: 0.85 }}>
+                v{__APP_VERSION__}
+              </Box>
+            )}
           </Typography>
 
           <ToggleButtonGroup
