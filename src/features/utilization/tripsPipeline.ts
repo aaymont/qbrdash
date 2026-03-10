@@ -163,26 +163,29 @@ export function aggregateTrips(trips: TripRecord[]): UtilizationAggregates {
     const deviceId = t.device?.id ?? "unknown";
     const dist = t.distance ?? 0;
     const raw = t as unknown as Record<string, unknown>;
+    // Geotab defines Driving as "excluding idle" (Data Connector DriveDuration_Seconds).
+    // Trip.DrivingDuration = "between start and stop" (wall clock) — can include in-trip idle.
+    // When we have EngineHours: engine = driving + idle. Use driving = engine − idle.
     let driving = parseDuration(raw.drivingDuration ?? raw.DrivingDuration);
+    let idling = parseDuration(raw.idlingDuration ?? raw.IdlingDuration);
+    const engineSeconds = parseEngineHours(raw.engineHours ?? raw.EngineHours);
+    const prevEngineSec = prevEngineHoursByDevice.get(deviceId);
+    if (prevEngineSec != null && engineSeconds > prevEngineSec) {
+      const engineDeltaSeconds = engineSeconds - prevEngineSec;
+      if (idling <= 0) {
+        const derivedIdle = Math.max(0, engineDeltaSeconds - driving);
+        idling = Math.min(derivedIdle, driving * 10, 86400);
+      }
+      driving = Math.max(0, Math.min(engineDeltaSeconds - idling, engineDeltaSeconds));
+    }
+    if (engineSeconds > 0) prevEngineHoursByDevice.set(deviceId, engineSeconds);
     if (driving <= 0 && t.start && t.stop) {
       const startMs = new Date(t.start).getTime();
       const stopMs = new Date(t.stop).getTime();
       if (!Number.isNaN(startMs) && !Number.isNaN(stopMs) && stopMs > startMs) {
-        driving = (stopMs - startMs) / 1000; // fallback: duration between start and stop
+        driving = (stopMs - startMs) / 1000; // fallback when no engine data
       }
     }
-    let idling = parseDuration(raw.idlingDuration ?? raw.IdlingDuration);
-    // EngineHours from Geotab Trip API is in seconds (same as StatusData DiagnosticEngineHoursId)
-    const engineSeconds = parseEngineHours(raw.engineHours ?? raw.EngineHours);
-    const prevEngineSec = prevEngineHoursByDevice.get(deviceId);
-    if (prevEngineSec != null && engineSeconds > prevEngineSec && driving > 0) {
-      const engineDeltaSeconds = engineSeconds - prevEngineSec;
-      const derivedIdle = Math.max(0, engineDeltaSeconds - driving);
-      // Sanity: idle per trip shouldn't exceed 10x driving or 24h
-      const capped = Math.min(derivedIdle, driving * 10, 86400);
-      if (capped > idling) idling = capped;
-    }
-    if (engineSeconds > 0) prevEngineHoursByDevice.set(deviceId, engineSeconds);
     const stop = parseDuration(raw.stopDuration ?? raw.StopDuration);
     const ahDist = t.afterHoursDistance ?? 0;
     const ahDriving = parseDuration(raw.afterHoursDrivingDuration ?? raw.AfterHoursDrivingDuration);
