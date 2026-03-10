@@ -1,16 +1,11 @@
-import React from "react";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
+import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { ThemeProvider, CssBaseline } from "@mui/material";
+import { AnimatePresence } from "framer-motion";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { AnimatedPage } from "@/components/Animated";
+import { theme } from "@/theme";
 import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
-
-const theme = createTheme({
-  palette: {
-    mode: "light",
-    primary: { main: "#1976d2" },
-  },
-});
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -21,19 +16,31 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
+  const location = useLocation();
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route
-        path="/"
-        element={
-          <PrivateRoute>
-            <DashboardPage />
-          </PrivateRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname || "/"}>
+        <Route
+          path="/login"
+          element={
+            <AnimatedPage>
+              <LoginPage />
+            </AnimatedPage>
+          }
+        />
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <AnimatedPage>
+                <DashboardPage />
+              </AnimatedPage>
+            </PrivateRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AnimatePresence>
   );
 }
 

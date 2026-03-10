@@ -1,15 +1,18 @@
 import { Box, Paper, Typography } from "@mui/material";
+import { AnimatedCard } from "./Animated";
 
 interface KpiTileProps {
   title: string;
   value: string | number;
   subtitle?: string;
   trend?: "up" | "down" | "neutral";
+  index?: number;
 }
 
-export function KpiTile({ title, value, subtitle, trend }: KpiTileProps) {
+export function KpiTile({ title, value, subtitle, trend, index = 0 }: KpiTileProps) {
   return (
-    <Paper
+    <AnimatedCard index={index}>
+      <Paper
       elevation={0}
       sx={{
         p: 2,
@@ -47,5 +50,6 @@ export function KpiTile({ title, value, subtitle, trend }: KpiTileProps) {
         </Box>
       )}
     </Paper>
+    </AnimatedCard>
   );
 }

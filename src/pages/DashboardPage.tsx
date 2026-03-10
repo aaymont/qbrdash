@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Box,
   AppBar,
@@ -172,14 +173,19 @@ export function DashboardPage() {
       </AppBar>
 
       {loading && (
-        <Box sx={{ width: "100%" }}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          style={{ width: "100%" }}
+        >
           <LinearProgress />
           {progress && (
             <Typography variant="caption" sx={{ px: 2, py: 0.5 }}>
               {progress} {progressVal.total > 1 ? `${progressVal.current}/${progressVal.total}` : ""}
             </Typography>
           )}
-        </Box>
+        </motion.div>
       )}
 
       <Box sx={{ px: 2, py: 1, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
@@ -213,10 +219,52 @@ export function DashboardPage() {
             <Tab label="Maintenance" />
           </Tabs>
           <Box sx={{ p: 2 }}>
-            {tab === 0 && <UtilizationTab data={data} />}
-            {tab === 1 && <SafetyTab data={data} />}
-            {tab === 2 && <OptimizationTab data={data} />}
-            {tab === 3 && <MaintenanceTab data={data} />}
+            <AnimatePresence mode="wait">
+              {tab === 0 && (
+                <motion.div
+                  key="utilization"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <UtilizationTab data={data} />
+                </motion.div>
+              )}
+              {tab === 1 && (
+                <motion.div
+                  key="safety"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <SafetyTab data={data} />
+                </motion.div>
+              )}
+              {tab === 2 && (
+                <motion.div
+                  key="optimization"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <OptimizationTab data={data} />
+                </motion.div>
+              )}
+              {tab === 3 && (
+                <motion.div
+                  key="maintenance"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <MaintenanceTab data={data} />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </Box>
         </>
       )}

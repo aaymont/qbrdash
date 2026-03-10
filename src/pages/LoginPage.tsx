@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -14,6 +14,7 @@ import {
   MenuItem,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
+import { AnimatedCard, AnimatedStaggerContainer, AnimatedStaggerItem } from "@/components/Animated";
 import { listClients, addClient, type ClientEntry } from "@/lib/clientRegistry";
 
 export function LoginPage() {
@@ -81,9 +82,10 @@ export function LoginPage() {
         p: 2,
       }}
     >
-      <Card sx={{ maxWidth: 420 }}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h5" gutterBottom>
+      <AnimatedCard>
+        <Card sx={{ maxWidth: 420 }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h5" gutterBottom>
             Geotab QBR Insights
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -91,13 +93,17 @@ export function LoginPage() {
           </Typography>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
-              {error}
-            </Alert>
+            <AnimatedStaggerItem>
+              <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
+                {error}
+              </Alert>
+            </AnimatedStaggerItem>
           )}
 
           <form onSubmit={handleSubmit}>
+            <AnimatedStaggerContainer>
             {savedClients.length > 0 && (
+              <AnimatedStaggerItem>
               <FormControl fullWidth sx={{ mb: 2 }}>
                 <InputLabel>Saved client</InputLabel>
                 <Select
@@ -113,8 +119,10 @@ export function LoginPage() {
                   ))}
                 </Select>
               </FormControl>
+              </AnimatedStaggerItem>
             )}
 
+            <AnimatedStaggerItem>
             <TextField
               fullWidth
               label="Server"
@@ -123,6 +131,8 @@ export function LoginPage() {
               margin="normal"
               placeholder="my.geotab.com"
             />
+            </AnimatedStaggerItem>
+            <AnimatedStaggerItem>
             <TextField
               fullWidth
               label="Database"
@@ -131,6 +141,8 @@ export function LoginPage() {
               margin="normal"
               required
             />
+            </AnimatedStaggerItem>
+            <AnimatedStaggerItem>
             <TextField
               fullWidth
               label="Username"
@@ -148,17 +160,21 @@ export function LoginPage() {
               margin="normal"
               required
             />
+            </AnimatedStaggerItem>
             {!selectedClient && (
-              <TextField
-                fullWidth
-                label="Friendly name (optional)"
-                value={friendlyName}
-                onChange={(e) => setFriendlyName(e.target.value)}
-                margin="normal"
-                placeholder="Save as..."
-              />
+              <AnimatedStaggerItem>
+                <TextField
+                  fullWidth
+                  label="Friendly name (optional)"
+                  value={friendlyName}
+                  onChange={(e) => setFriendlyName(e.target.value)}
+                  margin="normal"
+                  placeholder="Save as..."
+                />
+              </AnimatedStaggerItem>
             )}
 
+            <AnimatedStaggerItem>
             <Button
               type="submit"
               variant="contained"
@@ -169,6 +185,8 @@ export function LoginPage() {
             >
               {loading ? "Signing in..." : "Sign In"}
             </Button>
+            </AnimatedStaggerItem>
+            </AnimatedStaggerContainer>
           </form>
 
           <Typography variant="caption" display="block" sx={{ mt: 2 }} color="text.secondary">
@@ -176,6 +194,7 @@ export function LoginPage() {
           </Typography>
         </CardContent>
       </Card>
+      </AnimatedCard>
     </Box>
   );
 }

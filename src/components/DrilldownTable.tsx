@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Table,
   TableBody,
@@ -12,6 +13,8 @@ import {
   Paper,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+
+const MotionTableRow = motion(TableRow);
 
 export interface Column<T> {
   id: keyof T | string;
@@ -86,10 +89,13 @@ export function DrilldownTable<T extends Record<string, unknown>>({
             </TableRow>
           </TableHead>
           <TableBody>
-            {paginated.map((row) => (
-              <TableRow
+            {paginated.map((row, idx) => (
+              <MotionTableRow
                 key={getRowId(row)}
-                hover={!!onRowClick}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: idx * 0.02 }}
+                whileHover={onRowClick ? { backgroundColor: "rgba(0,0,0,0.04)" } : undefined}
                 onClick={() => onRowClick?.(row)}
                 sx={onRowClick ? { cursor: "pointer" } : {}}
               >
@@ -100,7 +106,7 @@ export function DrilldownTable<T extends Record<string, unknown>>({
                       : String(row[col.id as keyof T] ?? "")}
                   </TableCell>
                 ))}
-              </TableRow>
+              </MotionTableRow>
             ))}
           </TableBody>
         </Table>

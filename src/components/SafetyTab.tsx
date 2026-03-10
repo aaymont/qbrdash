@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { KpiTile } from "./KpiTile";
+import { AnimatedChart } from "./Animated";
 import { DrilldownTable } from "./DrilldownTable";
 import { DetailDrawer } from "./DetailDrawer";
 import { InsightsPanel } from "./InsightsPanel";
@@ -71,10 +72,10 @@ export function SafetyTab({ data }: { data: DataPayload }) {
     <Box>
       <Grid container spacing={2}>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Total events" value={s.totalEvents} />
+          <KpiTile title="Total events" value={s.totalEvents} index={0} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Rule types" value={Object.keys(s.byRule).length} />
+          <KpiTile title="Rule types" value={Object.keys(s.byRule).length} index={1} />
         </Grid>
         <Grid item xs={6} md={2}>
           <Tooltip title={s.speedProxyLabel || ""}>
@@ -83,13 +84,14 @@ export function SafetyTab({ data }: { data: DataPayload }) {
                 title="Speeding (proxy)"
                 value={formatDuration(s.speedProxySeconds)}
                 subtitle={s.speedProxySeconds > 0 ? "From Trip SpeedRanges" : undefined}
+                index={2}
               />
             </span>
           </Tooltip>
         </Grid>
-        {Object.entries(s.byRule).slice(0, 3).map(([ruleId, v]) => (
+        {Object.entries(s.byRule).slice(0, 3).map(([ruleId, v], i) => (
           <Grid item xs={6} md={2} key={ruleId}>
-            <KpiTile title={v.name} value={v.count} />
+            <KpiTile title={v.name} value={v.count} index={3 + i} />
           </Grid>
         ))}
       </Grid>
@@ -98,6 +100,7 @@ export function SafetyTab({ data }: { data: DataPayload }) {
         Events by rule type
       </Typography>
       <Box sx={{ height: 280 }}>
+        <AnimatedChart>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={byRuleChart}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -107,6 +110,7 @@ export function SafetyTab({ data }: { data: DataPayload }) {
             <Bar dataKey="count" fill="#d32f2f" name="Count" />
           </BarChart>
         </ResponsiveContainer>
+        </AnimatedChart>
       </Box>
 
       <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>

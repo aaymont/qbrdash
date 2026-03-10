@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Drawer,
   IconButton,
@@ -7,6 +6,7 @@ import {
   Divider,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import { AnimatedDrawerContent } from "./Animated";
 
 interface DetailDrawerProps {
   open: boolean;
@@ -30,7 +30,9 @@ export function DetailDrawer({ open, onClose, title, children }: DetailDrawerPro
         </IconButton>
       </Box>
       <Divider />
-      <Box sx={{ p: 2, overflow: "auto" }}>{children}</Box>
+      <Box sx={{ p: 2, overflow: "auto" }}>
+        <AnimatedDrawerContent>{children}</AnimatedDrawerContent>
+      </Box>
     </Drawer>
   );
 }

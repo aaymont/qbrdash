@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { KpiTile } from "./KpiTile";
+import { AnimatedChart } from "./Animated";
 import { InsightsPanel } from "./InsightsPanel";
 import type { DataPayload } from "@/features/dataService";
 
@@ -63,22 +64,22 @@ export function OptimizationTab({ data }: { data: DataPayload }) {
     <Box>
       <Grid container spacing={2}>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Idle %" value={`${idlePct.toFixed(1)}%`} />
+          <KpiTile title="Idle %" value={`${idlePct.toFixed(1)}%`} index={0} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="After-hours %" value={`${afterHoursPct.toFixed(1)}%`} />
+          <KpiTile title="After-hours %" value={`${afterHoursPct.toFixed(1)}%`} index={1} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} />
+          <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={2} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="After-hours km" value={u.totalAfterHoursDistanceKm.toFixed(1)} />
+          <KpiTile title="After-hours km" value={u.totalAfterHoursDistanceKm.toFixed(1)} index={3} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Speed range 1 (s)" value={u.speedRange1DurationSeconds} />
+          <KpiTile title="Speed range 1 (s)" value={u.speedRange1DurationSeconds} index={4} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Speed range 2+3 (s)" value={u.speedRange2DurationSeconds + u.speedRange3DurationSeconds} />
+          <KpiTile title="Speed range 2+3 (s)" value={u.speedRange2DurationSeconds + u.speedRange3DurationSeconds} index={5} />
         </Grid>
       </Grid>
 
@@ -86,6 +87,7 @@ export function OptimizationTab({ data }: { data: DataPayload }) {
         Top idlers (hours)
       </Typography>
       <Box sx={{ height: 280 }}>
+        <AnimatedChart>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={topIdle} layout="vertical" margin={{ left: 80 }}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -96,6 +98,7 @@ export function OptimizationTab({ data }: { data: DataPayload }) {
             <Bar dataKey="drivingHours" fill="#1976d2" name="Driving (h)" />
           </BarChart>
         </ResponsiveContainer>
+        </AnimatedChart>
       </Box>
 
       <Box sx={{ mt: 3 }}>

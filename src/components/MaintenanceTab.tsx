@@ -12,6 +12,7 @@ import {
   Area,
 } from "recharts";
 import { KpiTile } from "./KpiTile";
+import { AnimatedChart } from "./Animated";
 import { DrilldownTable } from "./DrilldownTable";
 import { DetailDrawer } from "./DetailDrawer";
 import { InsightsPanel } from "./InsightsPanel";
@@ -198,13 +199,13 @@ export function MaintenanceTab({ data }: { data: DataPayload }) {
     <Box>
       <Grid container spacing={2}>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Total faults" value={f.totalFaults} />
+          <KpiTile title="Total faults" value={f.totalFaults} index={0} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Recent (7d)" value={f.recentFaults.length} subtitle="Last 7 days" />
+          <KpiTile title="Recent (7d)" value={f.recentFaults.length} subtitle="Last 7 days" index={1} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Vehicles affected" value={Object.keys(f.byDevice).length} />
+          <KpiTile title="Vehicles affected" value={Object.keys(f.byDevice).length} index={2} />
         </Grid>
       </Grid>
 
@@ -212,6 +213,7 @@ export function MaintenanceTab({ data }: { data: DataPayload }) {
         Faults by vehicle
       </Typography>
       <Box sx={{ height: 280 }}>
+        <AnimatedChart>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -222,6 +224,7 @@ export function MaintenanceTab({ data }: { data: DataPayload }) {
             <Bar dataKey="recent" fill="#ed6c02" name="Recent (7d)" />
           </BarChart>
         </ResponsiveContainer>
+        </AnimatedChart>
       </Box>
 
       <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>

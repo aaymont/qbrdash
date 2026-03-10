@@ -13,6 +13,7 @@ import {
   Cell,
 } from "recharts";
 import { KpiTile } from "./KpiTile";
+import { AnimatedChart } from "./Animated";
 import { DrilldownTable } from "./DrilldownTable";
 import { DetailDrawer } from "./DetailDrawer";
 import { InsightsPanel } from "./InsightsPanel";
@@ -97,22 +98,22 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
     <Box>
       <Grid container spacing={2}>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Total distance" value={formatKm(u.totalDistanceKm)} />
+          <KpiTile title="Total distance" value={formatKm(u.totalDistanceKm)} index={0} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Trips" value={u.tripCount} />
+          <KpiTile title="Trips" value={u.tripCount} index={1} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Driving time" value={formatHours(u.totalDrivingSeconds)} />
+          <KpiTile title="Driving time" value={formatHours(u.totalDrivingSeconds)} index={2} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} />
+          <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={3} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="After-hours km" value={formatKm(u.totalAfterHoursDistanceKm)} />
+          <KpiTile title="After-hours km" value={formatKm(u.totalAfterHoursDistanceKm)} index={4} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Active vehicles" value={Object.keys(u.byDevice).length} />
+          <KpiTile title="Active vehicles" value={Object.keys(u.byDevice).length} index={5} />
         </Grid>
       </Grid>
 
@@ -120,6 +121,7 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
         Distance by vehicle (top 10)
       </Typography>
       <Box sx={{ height: 280 }}>
+        <AnimatedChart>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} layout="vertical" margin={{ left: 80 }}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -129,12 +131,14 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
             <Bar dataKey="distance" fill="#1976d2" name="Distance (km)" />
           </BarChart>
         </ResponsiveContainer>
+        </AnimatedChart>
       </Box>
 
       <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
         Time distribution (driving / idle / stopped)
       </Typography>
       <Box sx={{ height: 240 }}>
+        <AnimatedChart>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -155,6 +159,7 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
             <Tooltip formatter={(v: number) => formatHours(v)} />
           </PieChart>
         </ResponsiveContainer>
+        </AnimatedChart>
       </Box>
 
       <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
