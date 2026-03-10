@@ -62,11 +62,24 @@ Direct browser calls to MyGeotab API typically work. If CORS blocks your deploym
 
 ## Data Connector (optional)
 
-For more accurate utilization KPIs (driving time, idle time), the dashboard uses the Geotab Data Connector when possible. **No proxy or external services required** — it fetches directly from `data-connector.geotab.com` with your credentials.
+For more accurate utilization KPIs (driving time, idle time), the dashboard uses the Geotab Data Connector when possible.
 
 1. Enable the Data Connector add-in: Administration → Add-Ins → add `https://app.geotab.com/addins/geotab/dataConnector/manifest.json`
 2. New databases may need 2–3 hours for KPI tables to backfill
-3. If Data Connector is unavailable (CORS, etc.), the app falls back to the Trip API automatically
+3. **In development** (`npm run dev`): A Vite proxy handles OData requests and avoids CORS
+4. **In production** (e.g. GitHub Pages): Direct fetch is blocked by CORS. Use the Firebase proxy:
+
+### Firebase OData Proxy (production)
+
+1. Deploy the proxy: `cd functions && npm run build && firebase deploy --only functions`
+2. Copy the function URL (e.g. `https://us-central1-PROJECT.cloudfunctions.net/odataProxy`)
+3. Build the dashboard with the proxy URL:
+   ```bash
+   VITE_ODATA_PROXY_URL=https://us-central1-PROJECT.cloudfunctions.net/odataProxy npm run build
+   ```
+4. In GitHub Actions (or your CI), add `VITE_ODATA_PROXY_URL` as an env var before `npm run build`
+
+If the Data Connector proxy is unavailable, the app falls back to the Trip API automatically.
 
 ## Data Model (v1)
 

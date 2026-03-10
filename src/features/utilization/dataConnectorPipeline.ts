@@ -77,10 +77,12 @@ async function fetchODataPage(
 ): Promise<ODataResponse> {
   onProgress?.("odata");
 
-  // In dev, use Vite proxy to avoid CORS. Production: direct fetch (may fail CORS).
-  const useDevProxy = import.meta.env.DEV;
-  if (useDevProxy) {
-    const res = await fetch(ODATA_PROXY_PATH, {
+  // Dev: Vite proxy. Production: Firebase (or other) proxy if VITE_ODATA_PROXY_URL set; else direct fetch (CORS).
+  const proxyUrl = import.meta.env.VITE_ODATA_PROXY_URL as string | undefined;
+  const useProxy = import.meta.env.DEV || proxyUrl;
+  const target = import.meta.env.DEV ? ODATA_PROXY_PATH : proxyUrl;
+  if (useProxy && target) {
+    const res = await fetch(target, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
