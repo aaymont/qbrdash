@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { AnimatedCard, AnimatedStaggerContainer, AnimatedStaggerItem } from "@/components/Animated";
 import { listClients, addClient, type ClientEntry } from "@/lib/clientRegistry";
+import { getCachedCredentials, setCachedCredentials } from "@/lib/credentialCache";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -50,6 +51,7 @@ export function LoginPage() {
         password,
       };
       await login(creds, client);
+      setCachedCredentials(creds.server, creds.database, creds.userName, creds.password);
       if (!selectedClient && (friendlyName || database)) {
         addClient(creds.server, creds.database, friendlyName || database);
       }
@@ -63,11 +65,24 @@ export function LoginPage() {
 
   const handleSelectClient = (id: string) => {
     setSelectedClient(id);
+    if (!id) {
+      setUserName("");
+      setPassword("");
+      return;
+    }
     const c = savedClients.find((x) => x.id === id);
     if (c) {
       setServer(c.server);
       setDatabase(c.database);
       setFriendlyName(c.friendlyName);
+      const cached = getCachedCredentials(c.server, c.database);
+      if (cached) {
+        setUserName(cached.userName);
+        setPassword(cached.password);
+      } else {
+        setUserName("");
+        setPassword("");
+      }
     }
   };
 
@@ -190,7 +205,7 @@ export function LoginPage() {
           </form>
 
           <Typography variant="caption" display="block" sx={{ mt: 2 }} color="text.secondary">
-            Credentials are not stored. Session is kept in this tab only.
+            Username and password are cached per client for convenience. Session is kept in this tab only.
           </Typography>
         </CardContent>
       </Card>

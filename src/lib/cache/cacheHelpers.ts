@@ -36,6 +36,17 @@ export async function getCached<T>(
   return entry.data as T;
 }
 
+/** Returns cached data regardless of expiry. Used to display cached data on load. */
+export async function getCachedEntry<T>(
+  key: CacheKey,
+  dataType: string
+): Promise<{ data: T; cachedAt: number } | null> {
+  const id = entryId(key, dataType);
+  const entry = await db.cache.get(id);
+  if (!entry || !entry.data) return null;
+  return { data: entry.data as T, cachedAt: entry.cachedAt };
+}
+
 export async function setCached(
   key: CacheKey,
   dataType: string,

@@ -72,10 +72,6 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
       metric: "Idle %",
     },
     {
-      text: `After-hours distance: ${formatDistance(u.totalAfterHoursDistanceKm)}`,
-      metric: `After-hours (${unit})`,
-    },
-    {
       text: `Average ${formatDistance(u.totalDistanceKm / (u.tripCount || 1))} per trip`,
       metric: "Trips",
     },
@@ -87,7 +83,6 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
 
   const actions = [
     { action: "Reduce idle time", kpi: "Idle %", target: "< 15%", owner: "Ops", dueDate: "TBD" },
-    { action: "Review after-hours usage", kpi: "After-hours", target: "Minimize", owner: "FM", dueDate: "TBD" },
     { action: "Optimize trip routing", kpi: "Distance/trip", target: "-5%", owner: "Dispatch", dueDate: "TBD" },
     { action: "Vehicle utilization review", kpi: "Trips/vehicle", target: "+10%", owner: "Ops", dueDate: "TBD" },
     { action: "Driver coaching", kpi: "Idle/vehicle", target: "-20%", owner: "Safety", dueDate: "TBD" },
@@ -109,10 +104,7 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
           <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={3} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title={`After-hours (${unit})`} value={formatDistance(u.totalAfterHoursDistanceKm)} index={4} />
-        </Grid>
-        <Grid item xs={6} md={2}>
-          <KpiTile title="Active vehicles" value={Object.keys(u.byDevice).length} index={5} />
+          <KpiTile title="Active vehicles" value={Object.keys(u.byDevice).length} index={4} />
         </Grid>
       </Grid>
 

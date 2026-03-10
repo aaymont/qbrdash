@@ -51,7 +51,7 @@ export function PrintView({ data, client, onClose }: PrintViewProps) {
         Utilization
       </Typography>
       <Typography>
-        Distance: {formatDistance(u.totalDistanceKm)} | Trips: {u.tripCount} | Driving: {(u.totalDrivingSeconds / 3600).toFixed(1)} h | Idle: {(u.totalIdlingSeconds / 3600).toFixed(1)} h | After-hours: {formatDistance(u.totalAfterHoursDistanceKm)}
+        Distance: {formatDistance(u.totalDistanceKm)} | Trips: {u.tripCount} | Driving: {(u.totalDrivingSeconds / 3600).toFixed(1)} h | Idle: {(u.totalIdlingSeconds / 3600).toFixed(1)} h
       </Typography>
 
       <Typography variant="h6" sx={{ mt: 2 }}>

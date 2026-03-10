@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Box,
@@ -15,20 +15,25 @@ import {
   Select,
   MenuItem,
   TextField,
+  Alert,
 } from "@mui/material";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import PrintIcon from "@mui/icons-material/Print";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "@/context/AuthContext";
 import { useDistanceUnit } from "@/context/DistanceUnitContext";
-import { loadData, clearCache, clearCacheForClient, type DataPayload, type DateWindow } from "@/features/dataService";
+import { loadData, getCachedDataForDisplay, clearCache, clearCacheForClient, type DataPayload, type DateWindow } from "@/features/dataService";
 import { UtilizationTab } from "@/components/UtilizationTab";
 import { SafetyTab } from "@/components/SafetyTab";
 import { OptimizationTab } from "@/components/OptimizationTab";
 import { MaintenanceTab } from "@/components/MaintenanceTab";
 import { PrintView } from "@/components/PrintView";
+
+const STALE_DAYS = 7;
+const STALE_MS = STALE_DAYS * 24 * 60 * 60 * 1000;
 
 const PRESETS = [
   { label: "7 days", days: 7 },
@@ -66,6 +71,15 @@ export function DashboardPage() {
     const preset = PRESETS.find((p) => p.days === windowPreset) ?? PRESETS[0];
     return { type: "preset", days: preset.days };
   }, [windowPreset, customFrom, customTo]);
+
+  const dateRange = useCallback(() => {
+    const w = getWindow();
+    if (w.type === "custom" && w.from && w.to) return { from: w.from, to: w.to };
+    const to = new Date();
+    const days = w.days ?? 7;
+    const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
+    return { from, to };
+  }, [getWindow]);
 
   const refresh = useCallback(async () => {
     if (!api || !server || !database) return;
@@ -110,12 +124,39 @@ export function DashboardPage() {
     setCachedUntil(null);
   }, [server, database]);
 
+  useEffect(() => {
+    if (!server || !database) return;
+    getCachedDataForDisplay(server, database, getWindow()).then((payload) => {
+      if (payload) {
+        setData(payload);
+        setLastRefreshed(payload.cachedAt);
+        setCachedUntil(payload.expiresAt);
+      }
+    });
+  }, [server, database, getWindow]);
+
+  const isDataStale = data != null && data.cachedAt != null && Date.now() - data.cachedAt > STALE_MS;
+
   if (!api || !client) {
     return null;
   }
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+      {isDataStale && (
+        <Alert
+          severity="warning"
+          icon={<WarningAmberIcon />}
+          sx={{ borderRadius: 0 }}
+          action={
+            <Button color="inherit" size="small" onClick={refresh}>
+              Refresh
+            </Button>
+          }
+        >
+          Data is more than {STALE_DAYS} days old. Refresh for the latest.
+        </Alert>
+      )}
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
@@ -202,17 +243,22 @@ export function DashboardPage() {
         </motion.div>
       )}
 
-      <Box sx={{ px: 2, py: 1, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
-        {lastRefreshed && (
-          <Typography variant="caption" color="text.secondary">
-            Last refreshed: {new Date(lastRefreshed).toLocaleString()}
-          </Typography>
-        )}
-        {cachedUntil && (
-          <Typography variant="caption" color="text.secondary">
-            Data cached until: {new Date(cachedUntil).toLocaleString()}
-          </Typography>
-        )}
+      <Box sx={{ px: 2, py: 1, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
+          {lastRefreshed && (
+            <Typography variant="caption" color="text.secondary">
+              Last refreshed: {new Date(lastRefreshed).toLocaleString()}
+            </Typography>
+          )}
+          {cachedUntil && (
+            <Typography variant="caption" color="text.secondary">
+              Data cached until: {new Date(cachedUntil).toLocaleString()}
+            </Typography>
+          )}
+        </Box>
+        <Typography variant="caption" color="text.secondary">
+          Data range: {dateRange().from.toLocaleDateString()} – {dateRange().to.toLocaleDateString()}
+        </Typography>
       </Box>
 
       {!data && !loading && (

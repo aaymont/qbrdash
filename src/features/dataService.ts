@@ -3,7 +3,7 @@
  */
 
 import type { GeotabApiWrapper } from "@/lib/geotab";
-import { getCached, setCached, clearCache, clearCacheForClient, type CacheKey } from "@/lib/cache/cacheHelpers";
+import { getCached, getCachedEntry, setCached, clearCache, clearCacheForClient, type CacheKey } from "@/lib/cache/cacheHelpers";
 import { fetchTrips, aggregateTrips, type UtilizationAggregates } from "@/features/utilization/tripsPipeline";
 import {
   fetchExceptionEvents,
@@ -156,6 +156,17 @@ export async function loadData(
 
   await setCached(cacheKey, "qbr_data", payload as unknown as Record<string, unknown>, ttlMs);
   return payload;
+}
+
+/** Returns cached payload for display on load, even if expired. */
+export async function getCachedDataForDisplay(
+  server: string,
+  database: string,
+  window: DateWindow
+): Promise<DataPayload | null> {
+  const cacheKey = toCacheKey(window, server, database);
+  const entry = await getCachedEntry<DataPayload>(cacheKey, "qbr_data");
+  return entry?.data ?? null;
 }
 
 export { clearCache, clearCacheForClient };

@@ -25,8 +25,6 @@ export function OptimizationTab({ data }: { data: DataPayload }) {
 
   const totalEngine = u.totalDrivingSeconds + u.totalIdlingSeconds;
   const idlePct = totalEngine > 0 ? (u.totalIdlingSeconds / totalEngine) * 100 : 0;
-  const afterHoursPct =
-    u.totalDistanceKm > 0 ? (u.totalAfterHoursDistanceKm / u.totalDistanceKm) * 100 : 0;
 
   const topIdle = Object.entries(u.byDevice)
     .map(([id, v]) => ({
@@ -39,14 +37,9 @@ export function OptimizationTab({ data }: { data: DataPayload }) {
 
   const insights = [
     { text: `Idle ratio: ${idlePct.toFixed(1)}% of engine time`, metric: "Idle %" },
-    { text: `After-hours: ${afterHoursPct.toFixed(1)}% of total distance`, metric: "After-hours %" },
     {
       text: `Speeding proxy: ${formatHours(u.speedRange1DurationSeconds + u.speedRange2DurationSeconds + u.speedRange3DurationSeconds)}`,
       metric: "Speed ranges",
-    },
-    {
-      text: `Work vs after-hours driving: ${formatHours(u.totalDrivingSeconds - u.totalAfterHoursDrivingSeconds)} vs ${formatHours(u.totalAfterHoursDrivingSeconds)}`,
-      metric: "Time split",
     },
     {
       text: `${Object.keys(u.byDevice).length} vehicles with activity`,
@@ -56,7 +49,6 @@ export function OptimizationTab({ data }: { data: DataPayload }) {
 
   const actions = [
     { action: "Target idle < 15%", kpi: "Idle %", target: "< 15%", owner: "Ops", dueDate: "TBD" },
-    { action: "Reduce after-hours usage", kpi: "After-hours", target: "-10%", owner: "FM", dueDate: "TBD" },
     { action: "Route optimization", kpi: "Distance", target: "-5%", owner: "Dispatch", dueDate: "TBD" },
     { action: "Driver behavior coaching", kpi: "Speeding proxy", target: "Reduce", owner: "Safety", dueDate: "TBD" },
     { action: "Shift scheduling review", kpi: "Work hours", target: "Optimize", owner: "HR", dueDate: "TBD" },
@@ -69,19 +61,13 @@ export function OptimizationTab({ data }: { data: DataPayload }) {
           <KpiTile title="Idle %" value={`${idlePct.toFixed(1)}%`} index={0} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="After-hours %" value={`${afterHoursPct.toFixed(1)}%`} index={1} />
+          <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={1} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={2} />
+          <KpiTile title="Speed range 1 (s)" value={u.speedRange1DurationSeconds} index={2} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="After-hours distance" value={formatDistance(u.totalAfterHoursDistanceKm)} index={3} />
-        </Grid>
-        <Grid item xs={6} md={2}>
-          <KpiTile title="Speed range 1 (s)" value={u.speedRange1DurationSeconds} index={4} />
-        </Grid>
-        <Grid item xs={6} md={2}>
-          <KpiTile title="Speed range 2+3 (s)" value={u.speedRange2DurationSeconds + u.speedRange3DurationSeconds} index={5} />
+          <KpiTile title="Speed range 2+3 (s)" value={u.speedRange2DurationSeconds + u.speedRange3DurationSeconds} index={3} />
         </Grid>
       </Grid>
 
