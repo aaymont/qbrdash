@@ -50,19 +50,37 @@ interface ODataResponse {
   "@odata.nextLink"?: string;
 }
 
-/** Returns $search value for Data Connector. Uses from_X_to_Y to match tool's date range and Geotab Trip Summary.
- *  Avoids last_N_day (which excludes current partial days and doesn't match our rolling window). */
-function toSearchParam(window: DateWindow): string {
-  let from: Date;
-  let to: Date;
+const SEGMENT_DAYS = 7;
+
+/** Get from/to dates for the window. */
+function getDateRange(window: DateWindow): { from: Date; to: Date } {
   if (window.type === "custom" && window.from && window.to) {
-    from = window.from;
-    to = window.to;
-  } else {
-    const days = window.days ?? 7;
-    to = new Date();
-    from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
+    return { from: window.from, to: window.to };
   }
+  const days = window.days ?? 7;
+  const to = new Date();
+  const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
+  return { from, to };
+}
+
+/** Split date range into 7-day segments to avoid timeouts on large pulls. */
+function getSegments(from: Date, to: Date): Array<{ from: Date; to: Date }> {
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const segments: Array<{ from: Date; to: Date }> = [];
+  let start = from.getTime();
+  const end = to.getTime();
+  while (start < end) {
+    const segmentEnd = Math.min(start + SEGMENT_DAYS * msPerDay, end);
+    segments.push({
+      from: new Date(start),
+      to: new Date(segmentEnd),
+    });
+    start = segmentEnd;
+  }
+  return segments;
+}
+
+function toSearchParam(from: Date, to: Date): string {
   const fromStr = from.toISOString().slice(0, 10);
   const toStr = to.toISOString().slice(0, 10);
   return `from_${fromStr}_to_${toStr}`;
@@ -144,63 +162,74 @@ function emptyAggregates(): UtilizationAggregates {
   };
 }
 
+function mergeRowIntoAgg(agg: UtilizationAggregates, row: VehicleKpiRow): void {
+  const deviceId = row.DeviceId ?? "unknown";
+  const dist = row.Distance_Km ?? 0;
+  const drive = row.DriveDuration_Seconds ?? 0;
+  const idle = row.IdleDuration_Seconds ?? 0;
+  const stop = row.StopDuration_Seconds ?? 0;
+  const trips = row.Trip_Count ?? 0;
+  const ahDist = row.AfterHoursDistance_Km ?? 0;
+  const ahDrive = row.AfterHoursDrivingDuration_Seconds ?? 0;
+  const ahStop = row.AfterHoursStopDuration_Seconds ?? 0;
+
+  agg.totalDistanceKm += dist;
+  agg.totalDrivingSeconds += drive;
+  agg.totalIdlingSeconds += idle;
+  agg.totalStopSeconds += stop;
+  agg.tripCount += trips;
+  agg.totalAfterHoursDistanceKm += ahDist;
+  agg.totalAfterHoursDrivingSeconds += ahDrive;
+  agg.totalAfterHoursStopSeconds += ahStop;
+
+  if (!agg.byDevice[deviceId]) {
+    agg.byDevice[deviceId] = {
+      distanceKm: 0,
+      drivingSeconds: 0,
+      idlingSeconds: 0,
+      stopSeconds: 0,
+      afterHoursDistanceKm: 0,
+      tripCount: 0,
+      speedProxySeconds: 0,
+    };
+  }
+  agg.byDevice[deviceId].distanceKm += dist;
+  agg.byDevice[deviceId].drivingSeconds += drive;
+  agg.byDevice[deviceId].idlingSeconds += idle;
+  agg.byDevice[deviceId].stopSeconds += stop;
+  agg.byDevice[deviceId].afterHoursDistanceKm += ahDist;
+  agg.byDevice[deviceId].tripCount += trips;
+}
+
 export async function fetchUtilizationFromDataConnector(
   creds: DataConnectorCredentials,
   window: DateWindow,
   onProgress?: (phase: string) => void
 ): Promise<UtilizationAggregates> {
-  const search = toSearchParam(window);
+  const { from, to } = getDateRange(window);
+  const segments = getSegments(from, to);
   const select =
     "DeviceId,Local_Date,Distance_Km,DriveDuration_Seconds,IdleDuration_Seconds,StopDuration_Seconds,Trip_Count,AfterHoursDistance_Km,AfterHoursDrivingDuration_Seconds,AfterHoursStopDuration_Seconds";
-  const path = `VehicleKpi_Daily?$search=${encodeURIComponent(search)}&$select=${encodeURIComponent(select)}`;
 
   const agg = emptyAggregates();
-  let nextLink: string | undefined = path;
 
-  while (nextLink) {
-    const data = (await fetchODataPage(creds, nextLink, onProgress)) as ODataResponse;
-    const rows = data.value ?? [];
+  for (let i = 0; i < segments.length; i++) {
+    onProgress?.(`odata ${i + 1}/${segments.length}`);
+    const seg = segments[i];
+    const search = toSearchParam(seg.from, seg.to);
+    const path = `VehicleKpi_Daily?$search=${encodeURIComponent(search)}&$select=${encodeURIComponent(select)}`;
+    let nextLink: string | undefined = path;
 
-    for (const row of rows) {
-      const deviceId = row.DeviceId ?? "unknown";
-      const dist = row.Distance_Km ?? 0;
-      const drive = row.DriveDuration_Seconds ?? 0;
-      const idle = row.IdleDuration_Seconds ?? 0;
-      const stop = row.StopDuration_Seconds ?? 0;
-      const trips = row.Trip_Count ?? 0;
-      const ahDist = row.AfterHoursDistance_Km ?? 0;
-      const ahDrive = row.AfterHoursDrivingDuration_Seconds ?? 0;
-      const ahStop = row.AfterHoursStopDuration_Seconds ?? 0;
+    while (nextLink) {
+      const data = (await fetchODataPage(creds, nextLink, onProgress)) as ODataResponse;
+      const rows = data.value ?? [];
 
-      agg.totalDistanceKm += dist;
-      agg.totalDrivingSeconds += drive;
-      agg.totalIdlingSeconds += idle;
-      agg.totalStopSeconds += stop;
-      agg.tripCount += trips;
-      agg.totalAfterHoursDistanceKm += ahDist;
-      agg.totalAfterHoursDrivingSeconds += ahDrive;
-      agg.totalAfterHoursStopSeconds += ahStop;
-
-      if (!agg.byDevice[deviceId]) {
-        agg.byDevice[deviceId] = {
-          distanceKm: 0,
-          drivingSeconds: 0,
-          idlingSeconds: 0,
-          stopSeconds: 0,
-          afterHoursDistanceKm: 0,
-          tripCount: 0,
-          speedProxySeconds: 0,
-        };
+      for (const row of rows) {
+        mergeRowIntoAgg(agg, row);
       }
-      agg.byDevice[deviceId].distanceKm += dist;
-      agg.byDevice[deviceId].drivingSeconds += drive;
-      agg.byDevice[deviceId].idlingSeconds += idle;
-      agg.byDevice[deviceId].stopSeconds += stop;
-      agg.byDevice[deviceId].afterHoursDistanceKm += ahDist;
-      agg.byDevice[deviceId].tripCount += trips;
-    }
 
-    nextLink = data["@odata.nextLink"] ?? undefined;
+      nextLink = data["@odata.nextLink"] ?? undefined;
+    }
   }
 
   return agg;
