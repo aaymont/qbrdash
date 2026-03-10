@@ -19,7 +19,7 @@ function formatHours(sec: number) {
 }
 
 export function OptimizationTab({ data }: { data: DataPayload }) {
-  const { formatDistance } = useDistanceUnit();
+  useDistanceUnit();
   const u = data.utilization;
   const deviceMap = new Map(data.devices.map((d) => [d.id, d.name]));
 

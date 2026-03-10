@@ -162,7 +162,7 @@ export function aggregateTrips(trips: TripRecord[]): UtilizationAggregates {
   for (const t of sorted) {
     const deviceId = t.device?.id ?? "unknown";
     const dist = t.distance ?? 0;
-    const raw = t as Record<string, unknown>;
+    const raw = t as unknown as Record<string, unknown>;
     let driving = parseDuration(raw.drivingDuration ?? raw.DrivingDuration);
     if (driving <= 0 && t.start && t.stop) {
       const startMs = new Date(t.start).getTime();
