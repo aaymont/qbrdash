@@ -29,7 +29,7 @@ export function DistanceUnitProvider({ children }: { children: React.ReactNode }
     (km: number) => {
       const value = unit === "mi" ? km * 0.621371 : km;
       const suffix = unit === "mi" ? " mi" : " km";
-      return `${value.toFixed(1)}${suffix}`;
+      return `${Math.round(value).toLocaleString()}${suffix}`;
     },
     [unit]
   );

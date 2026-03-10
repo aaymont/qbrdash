@@ -25,7 +25,7 @@ export function KpiTile({ title, value, subtitle, trend, index = 0 }: KpiTilePro
       <Typography variant="body2" color="text.secondary">
         {title}
       </Typography>
-      <Typography variant="h4" sx={{ mt: 0.5, fontWeight: 600 }}>
+      <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 600, fontSize: { xs: "1rem", sm: "1.1rem" } }}>
         {value}
       </Typography>
       {subtitle && (

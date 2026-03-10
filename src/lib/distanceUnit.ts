@@ -31,5 +31,5 @@ export function kmToMiles(km: number): number {
 export function formatDistance(km: number, unit: DistanceUnit): string {
   const value = unit === "mi" ? kmToMiles(km) : km;
   const suffix = unit === "mi" ? " mi" : " km";
-  return `${value.toFixed(1)}${suffix}`;
+  return `${Math.round(value).toLocaleString()}${suffix}`;
 }
