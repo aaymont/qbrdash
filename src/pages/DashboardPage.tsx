@@ -43,7 +43,7 @@ const PRESETS = [
 ];
 
 export function DashboardPage() {
-  const { api, client, logout, forgetSession } = useAuth();
+  const { api, client, credentials, logout, forgetSession } = useAuth();
   const { unit, setUnit } = useDistanceUnit();
   const [data, setData] = useState<DataPayload | null>(null);
   const [loading, setLoading] = useState(false);
@@ -96,7 +96,8 @@ export function DashboardPage() {
         (phase, current, total) => {
           setProgress(phase);
           setProgressVal({ current, total });
-        }
+        },
+        credentials ? { credentials } : undefined
       );
       setData(payload);
       setLastRefreshed(Date.now());
@@ -107,7 +108,7 @@ export function DashboardPage() {
       setLoading(false);
       setProgress(null);
     }
-  }, [api, server, database, getWindow, ttlHours]);
+  }, [api, server, database, credentials, getWindow, ttlHours]);
 
   const handleClearCache = useCallback(async () => {
     await clearCache();

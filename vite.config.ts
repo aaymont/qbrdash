@@ -1,9 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { odataProxy } from "./vite-odata-proxy";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), odataProxy()],
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },

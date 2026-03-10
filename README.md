@@ -60,9 +60,17 @@ GITHUB_PAGES=1 npm run build
 
 Direct browser calls to MyGeotab API typically work. If CORS blocks your deployment, use the optional proxy in `/proxy` (Cloudflare Worker). Set `VITE_PROXY_URL` and configure the API layer to route through it.
 
+## Data Connector (optional)
+
+For more accurate utilization KPIs (driving time, idle time), the dashboard uses the Geotab Data Connector when possible. **No proxy or external services required** — it fetches directly from `data-connector.geotab.com` with your credentials.
+
+1. Enable the Data Connector add-in: Administration → Add-Ins → add `https://app.geotab.com/addins/geotab/dataConnector/manifest.json`
+2. New databases may need 2–3 hours for KPI tables to backfill
+3. If Data Connector is unavailable (CORS, etc.), the app falls back to the Trip API automatically
+
 ## Data Model (v1)
 
-- **Utilization**: Trip records → distance, driving/idle/stop durations, after-hours, SpeedRange1/2/3.
+- **Utilization**: Data Connector VehicleKpi (preferred) or Trip API → distance, driving/idle/stop durations, after-hours, SpeedRange1/2/3.
 - **Safety**: Rule search (e.g. %Harsh%, %Speeding%) → ExceptionEvents. Fallback: Trip SpeedRange proxy.
 - **Maintenance**: FaultData for date range + last 7 days "recent faults" tile.
 

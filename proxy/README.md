@@ -1,9 +1,10 @@
-# Optional Geotab API Proxy
+# Optional Geotab Proxy
 
-If direct browser calls to Geotab API are blocked by CORS, deploy this stateless proxy.
+Stateless proxy for Geotab API and Data Connector OData. **Not required** — the dashboard uses direct Data Connector fetch by default. Use this proxy only if direct fetch fails (e.g. CORS) and you have a deployment target that supports Workers.
 
-- **Cloudflare Worker**: Use `proxy/cloudflare-worker.js`. Deploy via `wrangler deploy`.
-- **No persistence**: Proxy does not store credentials or log request bodies.
-- **Usage**: Set `VITE_PROXY_URL` to the proxy URL. The mg-api-js layer would need to be updated to route through the proxy when this env is set.
+- **No persistence**: Does not store credentials or log request bodies.
 
-For most Geotab deployments, direct API calls from the browser work; this proxy is optional.
+## Routes
+
+1. **Geotab API** (POST): Forwards to `my.geotab.com/apiv1`.
+2. **Data Connector OData** (POST `/odata`): Proxies OData with Basic Auth. Optional fallback when direct fetch is blocked.

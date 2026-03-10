@@ -16,6 +16,10 @@ import {
   aggregateFaults,
   type FaultAggregates,
 } from "@/features/maintenance/faultsPipeline";
+import {
+  fetchUtilizationFromDataConnector,
+  type DataConnectorCredentials,
+} from "@/features/utilization/dataConnectorPipeline";
 export interface DateWindow {
   type: "preset" | "custom";
   days?: number;
@@ -59,13 +63,18 @@ function getDateRange(window: DateWindow): { from: Date; to: Date } {
 
 export const DEFAULT_TTL_MS = 12 * 60 * 60 * 1000;
 
+export interface LoadDataOptions {
+  credentials?: DataConnectorCredentials;
+}
+
 export async function loadData(
   api: GeotabApiWrapper,
   server: string,
   database: string,
   window: DateWindow,
   ttlMs = DEFAULT_TTL_MS,
-  onProgress?: (phase: string, current: number, total: number) => void
+  onProgress?: (phase: string, current: number, total: number) => void,
+  options?: LoadDataOptions
 ): Promise<DataPayload> {
   const cacheKey = toCacheKey(window, server, database);
   const cached = await getCached<DataPayload>(cacheKey, "qbr_data", ttlMs);
@@ -115,10 +124,30 @@ export async function loadData(
   }
 
   onProgress?.("trips", 0, 1);
-  const trips = await fetchTrips(api, from, to, (c, t) =>
-    onProgress?.("trips", c, t)
-  );
-  const utilization = aggregateTrips(trips);
+  const creds = options?.credentials;
+  const hasCreds = creds?.database && creds?.userName && creds?.password;
+
+  let utilization: UtilizationAggregates;
+  if (hasCreds) {
+    try {
+      utilization = await fetchUtilizationFromDataConnector(
+        { database: creds.database, userName: creds.userName, password: creds.password, server: creds.server ?? server },
+        window,
+        (phase) => onProgress?.(phase, 0, 1)
+      );
+    } catch (err) {
+      console.warn("Data Connector unavailable, using Trip API:", err);
+      const trips = await fetchTrips(api, from, to, (c, t) =>
+        onProgress?.("trips", c, t)
+      );
+      utilization = aggregateTrips(trips);
+    }
+  } else {
+    const trips = await fetchTrips(api, from, to, (c, t) =>
+      onProgress?.("trips", c, t)
+    );
+    utilization = aggregateTrips(trips);
+  }
 
   const ruleIds = rules.map((r) => r.id);
   onProgress?.("safety", 0, ruleIds.length);

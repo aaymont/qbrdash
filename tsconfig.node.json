@@ -7,5 +7,5 @@
     "skipLibCheck": true,
     "composite": true
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "vite-odata-proxy.ts"]
 }
