@@ -1,4 +1,5 @@
 import { Box, Button, Typography } from "@mui/material";
+import { useDistanceUnit } from "@/context/DistanceUnitContext";
 import CloseIcon from "@mui/icons-material/Close";
 
 interface PrintViewProps {
@@ -8,6 +9,7 @@ interface PrintViewProps {
 }
 
 export function PrintView({ data, client, onClose }: PrintViewProps) {
+  const { formatDistance } = useDistanceUnit();
   const u = data.utilization;
   const s = data.safety;
   const f = data.faults;
@@ -49,7 +51,7 @@ export function PrintView({ data, client, onClose }: PrintViewProps) {
         Utilization
       </Typography>
       <Typography>
-        Distance: {u.totalDistanceKm.toFixed(1)} km | Trips: {u.tripCount} | Driving: {(u.totalDrivingSeconds / 3600).toFixed(1)} h | Idle: {(u.totalIdlingSeconds / 3600).toFixed(1)} h | After-hours: {u.totalAfterHoursDistanceKm.toFixed(1)} km
+        Distance: {formatDistance(u.totalDistanceKm)} | Trips: {u.tripCount} | Driving: {(u.totalDrivingSeconds / 3600).toFixed(1)} h | Idle: {(u.totalIdlingSeconds / 3600).toFixed(1)} h | After-hours: {formatDistance(u.totalAfterHoursDistanceKm)}
       </Typography>
 
       <Typography variant="h6" sx={{ mt: 2 }}>

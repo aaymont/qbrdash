@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDistanceUnit } from "@/context/DistanceUnitContext";
 import { Box, Grid, Typography } from "@mui/material";
 import {
   BarChart,
@@ -22,11 +23,9 @@ import type { DataPayload } from "@/features/dataService";
 function formatHours(sec: number) {
   return `${(sec / 3600).toFixed(1)} h`;
 }
-function formatKm(km: number) {
-  return `${km.toFixed(1)} km`;
-}
 
 export function UtilizationTab({ data }: { data: DataPayload }) {
+  const { formatDistance, toDisplayValue, unit } = useDistanceUnit();
   const [drawerRow, setDrawerRow] = useState<{
     deviceId: string;
     name: string;
@@ -42,7 +41,7 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
   const chartData = Object.entries(u.byDevice)
     .map(([id, v]) => ({
       name: deviceMap.get(id) ?? id.slice(0, 8),
-      distance: v.distanceKm,
+      distance: toDisplayValue(v.distanceKm),
       trips: v.tripCount,
     }))
     .sort((a, b) => b.distance - a.distance)
@@ -65,19 +64,19 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
 
   const insights = [
     {
-      text: `Total fleet distance: ${formatKm(u.totalDistanceKm)} over ${u.tripCount} trips`,
-      metric: "Distance (km)",
+      text: `Total fleet distance: ${formatDistance(u.totalDistanceKm)} over ${u.tripCount} trips`,
+      metric: `Distance (${unit})`,
     },
     {
       text: `Idle time: ${formatHours(u.totalIdlingSeconds)} (${((u.totalIdlingSeconds / (u.totalDrivingSeconds + u.totalIdlingSeconds || 1)) * 100).toFixed(0)}% of engine time)`,
       metric: "Idle %",
     },
     {
-      text: `After-hours distance: ${formatKm(u.totalAfterHoursDistanceKm)}`,
-      metric: "After-hours (km)",
+      text: `After-hours distance: ${formatDistance(u.totalAfterHoursDistanceKm)}`,
+      metric: `After-hours (${unit})`,
     },
     {
-      text: `Average ${(u.totalDistanceKm / (u.tripCount || 1)).toFixed(1)} km per trip`,
+      text: `Average ${formatDistance(u.totalDistanceKm / (u.tripCount || 1))} per trip`,
       metric: "Trips",
     },
     {
@@ -98,7 +97,7 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
     <Box>
       <Grid container spacing={2}>
         <Grid item xs={6} md={2}>
-          <KpiTile title="Total distance" value={formatKm(u.totalDistanceKm)} index={0} />
+          <KpiTile title="Total distance" value={formatDistance(u.totalDistanceKm)} index={0} />
         </Grid>
         <Grid item xs={6} md={2}>
           <KpiTile title="Trips" value={u.tripCount} index={1} />
@@ -110,7 +109,7 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
           <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={3} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="After-hours km" value={formatKm(u.totalAfterHoursDistanceKm)} index={4} />
+          <KpiTile title={`After-hours (${unit})`} value={formatDistance(u.totalAfterHoursDistanceKm)} index={4} />
         </Grid>
         <Grid item xs={6} md={2}>
           <KpiTile title="Active vehicles" value={Object.keys(u.byDevice).length} index={5} />
@@ -125,10 +124,10 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} layout="vertical" margin={{ left: 80 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" unit=" km" />
+            <XAxis type="number" unit={unit === "mi" ? " mi" : " km"} />
             <YAxis type="category" dataKey="name" width={70} />
             <Tooltip />
-            <Bar dataKey="distance" fill="#1976d2" name="Distance (km)" />
+            <Bar dataKey="distance" fill="#1976d2" name={`Distance (${unit})`} />
           </BarChart>
         </ResponsiveContainer>
         </AnimatedChart>
@@ -169,7 +168,7 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
         rows={tableRows}
         columns={[
           { id: "device", label: "Vehicle" },
-          { id: "distanceKm", label: "Distance (km)", format: (r) => (r.distanceKm as number).toFixed(1) },
+          { id: "distanceKm", label: `Distance (${unit})`, format: (r) => formatDistance(r.distanceKm as number) },
           { id: "drivingHours", label: "Driving (h)" },
           { id: "idlingHours", label: "Idling (h)" },
           { id: "tripCount", label: "Trips" },
@@ -200,7 +199,7 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
         {drawerRow && (
           <>
             <Typography variant="body2" color="text.secondary">
-              Distance: {formatKm(drawerRow.distanceKm)}
+              Distance: {formatDistance(drawerRow.distanceKm)}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Driving: {formatHours(drawerRow.drivingSeconds)}

@@ -6,7 +6,6 @@ import type { GeotabApiWrapper } from "@/lib/geotab";
 import { getCached, setCached, clearCache, clearCacheForClient, type CacheKey } from "@/lib/cache/cacheHelpers";
 import { fetchTrips, aggregateTrips, type UtilizationAggregates } from "@/features/utilization/tripsPipeline";
 import {
-  fetchRules,
   fetchExceptionEvents,
   aggregateSafety,
   type SafetyAggregates,
@@ -77,13 +76,43 @@ export async function loadData(
   const { from, to } = getDateRange(window);
 
   onProgress?.("devices", 0, 1);
-  const devicesRaw = (await api.call("Get", {
-    typeName: "Device",
-    resultsLimit: 10000,
-    propertySelector: { fields: ["id", "name"], isIncluded: true },
-  })) as Array<{ id: string; name: string }>;
-  const deviceList = devicesRaw ?? [];
+  const rulePatterns = ["%Speeding%", "%Harsh%", "%Harsh%Acceleration%", "%Harsh%Braking%", "%Harsh%Cornering%"];
+  const batchCalls: [string, Record<string, unknown>][] = [
+    [
+      "Get",
+      {
+        typeName: "Device",
+        resultsLimit: 25000,
+        propertySelector: { fields: ["id", "name"], isIncluded: true },
+      },
+    ],
+    ...rulePatterns.map((name) => [
+      "Get",
+      {
+        typeName: "Rule",
+        search: { name },
+        resultsLimit: 100,
+      },
+    ] as [string, Record<string, unknown>]),
+  ];
+  const batchResults = await api.multiCall<Array<{ id: string; name: string }> | Array<{ id: string; name: string }>>(batchCalls);
+  const devicesRaw = batchResults[0];
+  const deviceList = (Array.isArray(devicesRaw) ? devicesRaw : []) ?? [];
   const deviceMap = new Map(deviceList.map((d) => [d.id, d.name]));
+
+  const rules: Array<{ id: string; name: string }> = [];
+  const seenRules = new Set<string>();
+  for (let i = 1; i < batchResults.length; i++) {
+    const r = batchResults[i];
+    if (Array.isArray(r)) {
+      for (const rule of r) {
+        if (rule?.id && !seenRules.has(rule.id)) {
+          seenRules.add(rule.id);
+          rules.push(rule);
+        }
+      }
+    }
+  }
 
   onProgress?.("trips", 0, 1);
   const trips = await fetchTrips(api, from, to, (c, t) =>
@@ -91,7 +120,6 @@ export async function loadData(
   );
   const utilization = aggregateTrips(trips);
 
-  const rules = await fetchRules(api);
   const ruleIds = rules.map((r) => r.id);
   onProgress?.("safety", 0, ruleIds.length);
   const exceptions = await fetchExceptionEvents(

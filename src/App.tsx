@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-d
 import { ThemeProvider, CssBaseline } from "@mui/material";
 import { AnimatePresence } from "framer-motion";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { DistanceUnitProvider } from "@/context/DistanceUnitContext";
 import { AnimatedPage } from "@/components/Animated";
 import { theme } from "@/theme";
 import { LoginPage } from "@/pages/LoginPage";
@@ -49,9 +50,11 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <HashRouter>
-          <AppRoutes />
-        </HashRouter>
+        <DistanceUnitProvider>
+          <HashRouter>
+            <AppRoutes />
+          </HashRouter>
+        </DistanceUnitProvider>
       </AuthProvider>
     </ThemeProvider>
   );

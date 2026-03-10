@@ -16,10 +16,13 @@ import {
   MenuItem,
   TextField,
 } from "@mui/material";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import PrintIcon from "@mui/icons-material/Print";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "@/context/AuthContext";
+import { useDistanceUnit } from "@/context/DistanceUnitContext";
 import { loadData, clearCache, clearCacheForClient, type DataPayload, type DateWindow } from "@/features/dataService";
 import { UtilizationTab } from "@/components/UtilizationTab";
 import { SafetyTab } from "@/components/SafetyTab";
@@ -36,6 +39,7 @@ const PRESETS = [
 
 export function DashboardPage() {
   const { api, client, logout, forgetSession } = useAuth();
+  const { unit, setUnit } = useDistanceUnit();
   const [data, setData] = useState<DataPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
@@ -118,6 +122,16 @@ export function DashboardPage() {
             Geotab QBR Insights — {client.friendlyName}
           </Typography>
 
+          <ToggleButtonGroup
+            value={unit}
+            exclusive
+            onChange={(_, v) => v && setUnit(v)}
+            size="small"
+            sx={{ mx: 1 }}
+          >
+            <ToggleButton value="km">km</ToggleButton>
+            <ToggleButton value="mi">mi</ToggleButton>
+          </ToggleButtonGroup>
           <FormControl size="small" sx={{ minWidth: 140, mx: 1 }}>
             <InputLabel>Window</InputLabel>
             <Select

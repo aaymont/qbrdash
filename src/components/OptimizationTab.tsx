@@ -1,4 +1,5 @@
 import { Box, Grid, Typography } from "@mui/material";
+import { useDistanceUnit } from "@/context/DistanceUnitContext";
 import {
   BarChart,
   Bar,
@@ -18,6 +19,7 @@ function formatHours(sec: number) {
 }
 
 export function OptimizationTab({ data }: { data: DataPayload }) {
+  const { formatDistance } = useDistanceUnit();
   const u = data.utilization;
   const deviceMap = new Map(data.devices.map((d) => [d.id, d.name]));
 
@@ -73,7 +75,7 @@ export function OptimizationTab({ data }: { data: DataPayload }) {
           <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={2} />
         </Grid>
         <Grid item xs={6} md={2}>
-          <KpiTile title="After-hours km" value={u.totalAfterHoursDistanceKm.toFixed(1)} index={3} />
+          <KpiTile title="After-hours distance" value={formatDistance(u.totalAfterHoursDistanceKm)} index={3} />
         </Grid>
         <Grid item xs={6} md={2}>
           <KpiTile title="Speed range 1 (s)" value={u.speedRange1DurationSeconds} index={4} />

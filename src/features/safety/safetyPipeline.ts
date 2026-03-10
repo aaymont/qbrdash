@@ -38,33 +38,68 @@ const RULE_PATTERNS = ["%Speeding%", "%Harsh%", "%Harsh%Acceleration%", "%Harsh%
 export async function fetchRules(
   api: GeotabApiWrapper
 ): Promise<RuleRecord[]> {
-  const allRules: RuleRecord[] = [];
+  const calls: [string, Record<string, unknown>][] = RULE_PATTERNS.map((pattern) => [
+    "Get",
+    {
+      typeName: "Rule",
+      search: { name: pattern },
+      resultsLimit: 100,
+    },
+  ]);
+
+  const results = await api.multiCall<RuleRecord[]>(calls);
   const seen = new Set<string>();
+  const allRules: RuleRecord[] = [];
 
-  for (const pattern of RULE_PATTERNS) {
-    try {
-      const result = (await api.call("Get", {
-        typeName: "Rule",
-        search: {
-          name: pattern,
-        },
-        resultsLimit: 100,
-      })) as RuleRecord[];
-
-      if (result && Array.isArray(result)) {
-        for (const r of result) {
-          if (r.id && !seen.has(r.id)) {
-            seen.add(r.id);
-            allRules.push(r);
-          }
+  for (const result of results) {
+    if (result && Array.isArray(result)) {
+      for (const r of result) {
+        if (r?.id && !seen.has(r.id)) {
+          seen.add(r.id);
+          allRules.push(r);
         }
       }
-    } catch {
-      // pattern may not match any rules
     }
   }
 
   return allRules;
+}
+
+const EXCEPTION_RESULTS_LIMIT = 25000;
+
+async function fetchExceptionEventsForRule(
+  api: GeotabApiWrapper,
+  ruleId: string,
+  fromStr: string,
+  toStr: string
+): Promise<ExceptionEventRecord[]> {
+  const all: ExceptionEventRecord[] = [];
+  let searchFrom = fromStr;
+
+  while (true) {
+    const result = (await api.call("Get", {
+      typeName: "ExceptionEvent",
+      search: {
+        ruleSearch: { id: ruleId },
+        fromDate: searchFrom,
+        toDate: toStr,
+      },
+      resultsLimit: EXCEPTION_RESULTS_LIMIT,
+    })) as ExceptionEventRecord[];
+
+    if (!result || !Array.isArray(result) || result.length === 0) break;
+
+    all.push(...result);
+
+    if (result.length < EXCEPTION_RESULTS_LIMIT) break;
+
+    const last = result[result.length - 1];
+    const lastDate = last?.activeFrom;
+    if (!lastDate) break;
+    searchFrom = new Date(new Date(lastDate).getTime() + 1).toISOString();
+  }
+
+  return all;
 }
 
 export async function fetchExceptionEvents(
@@ -75,15 +110,10 @@ export async function fetchExceptionEvents(
   onProgress?: (chunk: number, total: number) => void
 ): Promise<ExceptionEventRecord[]> {
   const all: ExceptionEventRecord[] = [];
-
-  if (ruleIds.length === 0) {
-    return all;
-  }
-
   const fromStr = fromDate.toISOString();
   const toStr = toDate.toISOString();
 
-  const batchSize = 10;
+  const batchSize = 8;
   for (let i = 0; i < ruleIds.length; i += batchSize) {
     const batch = ruleIds.slice(i, i + batchSize);
     const calls: [string, Record<string, unknown>][] = batch.map((ruleId) => [
@@ -95,14 +125,32 @@ export async function fetchExceptionEvents(
           fromDate: fromStr,
           toDate: toStr,
         },
-        resultsLimit: 5000,
+        resultsLimit: EXCEPTION_RESULTS_LIMIT,
       },
     ]);
 
     const results = await api.multiCall<ExceptionEventRecord[]>(calls);
-    for (const res of results) {
+    for (let j = 0; j < results.length; j++) {
+      const res = results[j];
       if (res && Array.isArray(res)) {
         all.push(...res);
+        if (res.length >= EXCEPTION_RESULTS_LIMIT) {
+          const ruleId = batch[j];
+          if (ruleId) {
+            const lastDate = res[res.length - 1]?.activeFrom;
+            if (lastDate) {
+              const nextFrom = new Date(new Date(lastDate).getTime() + 1).toISOString();
+              const extra = await fetchExceptionEventsForRule(api, ruleId, nextFrom, toStr);
+              const existingIds = new Set(all.map((e) => e.id));
+              for (const e of extra) {
+                if (!existingIds.has(e.id)) {
+                  all.push(e);
+                  existingIds.add(e.id);
+                }
+              }
+            }
+          }
+        }
       }
     }
     onProgress?.(Math.min(i + batchSize, ruleIds.length), ruleIds.length);

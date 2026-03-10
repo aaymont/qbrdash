@@ -31,26 +31,57 @@ export interface FaultAggregates {
   rawFaults: FaultDataRecord[];
 }
 
-export async function fetchFaultData(
-  api: GeotabApiWrapper,
-  fromDate: Date,
-  toDate: Date,
-  onProgress?: (done: boolean) => void
-): Promise<FaultDataRecord[]> {
-  const fromStr = fromDate.toISOString();
-  const toStr = toDate.toISOString();
+const FAULT_RESULTS_LIMIT = 25000;
 
+async function fetchFaultDataPage(
+  api: GeotabApiWrapper,
+  fromStr: string,
+  toStr: string
+): Promise<FaultDataRecord[]> {
   const result = (await api.call("Get", {
     typeName: "FaultData",
     search: {
       fromDate: fromStr,
       toDate: toStr,
     },
-    resultsLimit: 10000,
+    resultsLimit: FAULT_RESULTS_LIMIT,
   })) as FaultDataRecord[];
 
-  onProgress?.(true);
   return result && Array.isArray(result) ? result : [];
+}
+
+export async function fetchFaultData(
+  api: GeotabApiWrapper,
+  fromDate: Date,
+  toDate: Date,
+  onProgress?: (done: boolean) => void
+): Promise<FaultDataRecord[]> {
+  const all: FaultDataRecord[] = [];
+  const daysTotal = (toDate.getTime() - fromDate.getTime()) / (24 * 60 * 60 * 1000);
+  const chunkDays = daysTotal <= 14 ? 1 : 7;
+  const chunkMs = chunkDays * 24 * 60 * 60 * 1000;
+  let start = fromDate.getTime();
+
+  while (start < toDate.getTime()) {
+    const chunkEnd = Math.min(start + chunkMs, toDate.getTime());
+    let searchFrom = new Date(start).toISOString();
+    const chunkTo = new Date(chunkEnd).toISOString();
+
+    while (true) {
+      const result = await fetchFaultDataPage(api, searchFrom, chunkTo);
+      if (result.length > 0) all.push(...result);
+      if (result.length < FAULT_RESULTS_LIMIT) break;
+      const last = result[result.length - 1];
+      const lastDt = last?.dateTime;
+      if (!lastDt) break;
+      searchFrom = new Date(new Date(lastDt).getTime() + 1).toISOString();
+    }
+
+    start = chunkEnd;
+  }
+
+  onProgress?.(true);
+  return all;
 }
 
 export async function fetchRecentFaults(

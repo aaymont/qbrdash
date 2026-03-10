@@ -184,7 +184,29 @@ export function aggregateTrips(trips: TripRecord[]): UtilizationAggregates {
   };
 }
 
-const RESULTS_LIMIT = 5000;
+const RESULTS_LIMIT = 25000;
+
+async function fetchTripsChunk(
+  api: GeotabApiWrapper,
+  chunkFrom: string,
+  chunkTo: string,
+  searchFrom?: string
+): Promise<TripRecord[]> {
+  const result = (await api.call("Get", {
+    typeName: "Trip",
+    search: {
+      fromDate: searchFrom ?? chunkFrom,
+      toDate: chunkTo,
+    },
+    resultsLimit: RESULTS_LIMIT,
+    propertySelector: {
+      fields: [...TRIP_PROPERTIES],
+      isIncluded: true,
+    },
+  })) as TripRecord[];
+
+  return result && Array.isArray(result) ? result : [];
+}
 
 export async function fetchTrips(
   api: GeotabApiWrapper,
@@ -193,37 +215,29 @@ export async function fetchTrips(
   onProgress?: (chunk: number, total: number) => void
 ): Promise<TripRecord[]> {
   const all: TripRecord[] = [];
-
-  const chunkSize =
-    (toDate.getTime() - fromDate.getTime()) / (24 * 60 * 60 * 1000) <= 14
-      ? 1
-      : 7;
+  const daysTotal = (toDate.getTime() - fromDate.getTime()) / (24 * 60 * 60 * 1000);
+  const chunkSize = daysTotal <= 14 ? 1 : 7;
   const chunkMs = chunkSize * 24 * 60 * 60 * 1000;
   let start = fromDate.getTime();
   let chunkIndex = 0;
-  const totalChunks = Math.ceil((toDate.getTime() - fromDate.getTime()) / chunkMs);
+  const totalChunks = Math.ceil(daysTotal / chunkSize);
 
   while (start < toDate.getTime()) {
     const chunkEnd = Math.min(start + chunkMs, toDate.getTime());
     const chunkFrom = new Date(start).toISOString();
     const chunkTo = new Date(chunkEnd).toISOString();
 
-    const result = (await api.call("Get", {
-      typeName: "Trip",
-      search: {
-        fromDate: chunkFrom,
-        toDate: chunkTo,
-      },
-      resultsLimit: RESULTS_LIMIT,
-      propertySelector: {
-        fields: [...TRIP_PROPERTIES],
-        isIncluded: true,
-      },
-    })) as TripRecord[];
-
-    if (result && Array.isArray(result)) {
-      all.push(...result);
+    let searchFrom = chunkFrom;
+    while (true) {
+      const result = await fetchTripsChunk(api, chunkFrom, chunkTo, searchFrom);
+      if (result.length > 0) all.push(...result);
+      if (result.length < RESULTS_LIMIT) break;
+      const last = result[result.length - 1];
+      const lastStop = last?.stop;
+      if (!lastStop) break;
+      searchFrom = new Date(new Date(lastStop).getTime() + 1).toISOString();
     }
+
     onProgress?.(chunkIndex + 1, totalChunks);
     chunkIndex++;
     start = chunkEnd;
