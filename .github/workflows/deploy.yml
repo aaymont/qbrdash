@@ -32,6 +32,7 @@ jobs:
         run: npm run build
         env:
           GITHUB_PAGES: "1"
+          VITE_ODATA_PROXY_URL: ${{ secrets.VITE_ODATA_PROXY_URL }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
