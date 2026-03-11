@@ -98,6 +98,7 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
   const displayUnit = unit === "mi" ? " mi" : " km";
   const effectiveUnit = selectedChartMetric === "distance" ? displayUnit : cfg.unit;
 
+  const maxDays = data.maxDaysInWindow ?? 999;
   const rawChartData = Object.entries(u.byDevice)
     .map(([id, v]) => ({
       name: deviceMap.get(id) ?? id.slice(0, 8),
@@ -108,7 +109,7 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
       drivingSeconds: v.drivingSeconds,
       idle: v.idlingSeconds / 3600,
       idlingSeconds: v.idlingSeconds,
-      daysUsed: v.daysUsed ?? 0,
+      daysUsed: Math.min(v.daysUsed ?? 0, maxDays),
       trips: v.tripCount,
     }))
     .sort((a, b) => (b[cfg.sortKey] as number) - (a[cfg.sortKey] as number))

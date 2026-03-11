@@ -32,6 +32,8 @@ export interface DataPayload {
   safety: SafetyAggregates;
   faults: FaultAggregates;
   devices: Array<{ id: string; name: string }>;
+  /** Max calendar days in the selected window (7, 14, 30, 90, or custom span). Used to cap days used. */
+  maxDaysInWindow?: number;
   cachedAt: number;
   expiresAt: number;
 }
@@ -173,12 +175,17 @@ export async function loadData(
   ]);
   const faults = aggregateFaults(faultsAll, recentFaults);
 
+  const maxDaysInWindow =
+    window.type === "preset" && window.days != null
+      ? window.days
+      : Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86400000));
   const now = Date.now();
   const payload: DataPayload = {
     utilization,
     safety,
     faults,
     devices: deviceList.length > 0 ? deviceList : Array.from(deviceMap.entries()).map(([id, name]) => ({ id, name })),
+    maxDaysInWindow,
     cachedAt: now,
     expiresAt: now + ttlMs,
   };

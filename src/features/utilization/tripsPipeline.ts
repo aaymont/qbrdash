@@ -215,8 +215,10 @@ export function aggregateTrips(trips: TripRecord[]): UtilizationAggregates {
     speedRange3DurationSeconds += sr3Dur;
 
     const dayKey = t.start ? Math.floor(new Date(t.start).getTime() / 86400000) : 0;
-    if (!daysUsedByDevice.has(deviceId)) daysUsedByDevice.set(deviceId, new Set());
-    daysUsedByDevice.get(deviceId)!.add(dayKey);
+    if (dist > 0) {
+      if (!daysUsedByDevice.has(deviceId)) daysUsedByDevice.set(deviceId, new Set());
+      daysUsedByDevice.get(deviceId)!.add(dayKey);
+    }
 
     if (!byDevice[deviceId]) {
       byDevice[deviceId] = {
