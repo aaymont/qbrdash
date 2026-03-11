@@ -2,6 +2,7 @@ import type { TooltipProps } from "recharts";
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -25,6 +26,8 @@ interface VerticalBarChartProps<T extends object> {
   barName?: string;
   bars?: BarConfig[];
   tooltipContent?: React.ComponentType<TooltipProps<number, string>>;
+  /** Return a fill color per data point for varied bar colors */
+  getBarFill?: (entry: T, index: number) => string;
 }
 
 export function VerticalBarChart<T extends object>({
@@ -35,6 +38,7 @@ export function VerticalBarChart<T extends object>({
   barName,
   bars,
   tooltipContent,
+  getBarFill,
 }: VerticalBarChartProps<T>) {
   return (
     <AnimatedChart>
@@ -49,7 +53,11 @@ export function VerticalBarChart<T extends object>({
               <Bar key={b.dataKey} dataKey={b.dataKey} fill={b.fill} name={b.name} radius={[4, 4, 0, 0]} />
             ))
           ) : dataKey ? (
-            <Bar dataKey={dataKey} fill={barFill} name={barName ?? dataKey} radius={[4, 4, 0, 0]} />
+            <Bar dataKey={dataKey} fill={getBarFill ? undefined : barFill} name={barName ?? dataKey} radius={[4, 4, 0, 0]}>
+              {getBarFill && data.map((entry, index) => (
+                <Cell key={index} fill={getBarFill(entry, index)} />
+              ))}
+            </Bar>
           ) : null}
         </BarChart>
       </ResponsiveContainer>

@@ -2,14 +2,12 @@ import { useState } from "react";
 import type { TooltipProps } from "recharts";
 import { formatDuration } from "@/lib/formatters";
 import { zenith } from "@/lib/theme";
-import { KpiTile } from "./KpiTile";
 import { DrilldownTable } from "./DrilldownTable";
 import { DetailDrawer } from "./DetailDrawer";
 import { VehicleSafetyDrawer } from "./details/VehicleSafetyDrawer";
 import { InsightsPanel } from "./InsightsPanel";
 import { SectionTitle } from "./ui/SectionTitle";
 import { ChartCard } from "./ui/ChartCard";
-import { KpiGrid } from "./ui/KpiGrid";
 import { VerticalBarChart } from "./charts/VerticalBarChart";
 import type { DataPayload } from "@/features/dataService";
 
@@ -34,6 +32,14 @@ function SafetyChartTooltip({ active, payload, label }: TooltipProps<number, str
     </div>
   );
 }
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Speeding: "#d32f2f",
+  "Harsh braking": "#f57c00",
+  "Harsh cornering": "#7b1fa2",
+  "Harsh acceleration": "#1976d2",
+  Other: "#616161",
+};
 
 const HARSH_CATEGORIES = [
   { key: "braking", label: "Harsh braking" },
@@ -216,31 +222,36 @@ export function SafetyTab({ data }: { data: DataPayload }) {
 
   return (
     <div>
-      <KpiGrid>
-        <KpiTile title="Total events" value={s.totalEvents} index={0} />
-        <div title={s.speedProxyLabel || undefined}>
-          <KpiTile
-            title="Speeding"
-            value={
-              totalSpeedingCount > 0 || s.speedProxySeconds > 0
-                ? formatDuration(totalSpeedingDuration)
-                : "—"
-            }
-            subtitle={
-              s.speedProxySeconds > 0 ? "Includes Trip speed ranges" : undefined
-            }
-            index={1}
-          />
-        </div>
-      </KpiGrid>
-
       <SectionTitle>Events by category</SectionTitle>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: zenith.spacing }}>
+        {chartData.map((c) => {
+          const color = CATEGORY_COLORS[c.name] ?? CATEGORY_COLORS.Other;
+          return (
+            <span
+              key={c.name}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "6px 12px",
+                borderRadius: 999,
+                backgroundColor: `${color}18`,
+                color,
+                fontSize: 13,
+                fontWeight: 500,
+                border: `1px solid ${color}40`,
+              }}
+            >
+              {c.name}: {c.count}
+            </span>
+          );
+        })}
+      </div>
       <ChartCard height={340}>
         <VerticalBarChart
           data={chartData}
           dataKey="count"
-          barFill="#d32f2f"
           barName="Events"
+          getBarFill={(entry) => CATEGORY_COLORS[entry.name] ?? CATEGORY_COLORS.Other}
           tooltipContent={SafetyChartTooltip}
         />
       </ChartCard>
