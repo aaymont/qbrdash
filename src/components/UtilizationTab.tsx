@@ -105,22 +105,27 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
         }}
       >
         <KpiTile title="Total distance" value={formatDistance(u.totalDistanceKm)} index={0} />
-        <KpiTile title="Trips" value={u.tripCount} index={1} />
-        <KpiTile title="Driving time" value={formatHours(u.totalDrivingSeconds)} index={2} />
-        <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={3} />
-        <KpiTile title="Active vehicles" value={Object.keys(u.byDevice).length} index={4} />
+        <KpiTile title="Driving time" value={formatHours(u.totalDrivingSeconds)} index={1} />
+        <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={2} />
+        <KpiTile title="Active vehicles" value={Object.keys(u.byDevice).length} index={3} />
       </Box>
 
       <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
         Distance by vehicle (top 10)
       </Typography>
-      <Box sx={{ height: 280 }}>
+      <Box sx={{ height: 340 }}>
         <AnimatedChart>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} layout="vertical" margin={{ left: 80 }}>
+            <defs>
+              <linearGradient id="distanceBarGradient" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#d32f2f" />
+                <stop offset="100%" stopColor="#2e7d32" />
+              </linearGradient>
+            </defs>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis type="number" unit={unit === "mi" ? " mi" : " km"} />
-            <YAxis type="category" dataKey="name" width={70} />
+            <YAxis type="category" dataKey="name" width={120} interval={0} />
             <Tooltip
               formatter={(_, __, item) => {
                 const payload = (item as { payload?: { distanceKm?: number } })
@@ -128,7 +133,30 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
                 return formatDistance(payload?.distanceKm ?? 0);
               }}
             />
-            <Bar dataKey="distance" fill="#1976d2" name={`Distance (${unit})`} />
+            <Bar
+              dataKey="distance"
+              fill="url(#distanceBarGradient)"
+              name={`Distance (${unit})`}
+              label={(props) => {
+                const { x, y, width, height, value = 0, payload } = props;
+                const km =
+                  (payload?.distanceKm as number | undefined) ??
+                  (unit === "mi" ? (value as number) / 0.621371 : (value as number));
+                const text = formatDistance(km);
+                return (
+                  <text
+                    x={(x ?? 0) + (width ?? 0) - 4}
+                    y={(y ?? 0) + (height ?? 0) / 2}
+                    textAnchor="end"
+                    dominantBaseline="middle"
+                    fill="white"
+                    style={{ fontWeight: 500, fontSize: 12 }}
+                  >
+                    {text}
+                  </text>
+                );
+              }}
+            />
           </BarChart>
         </ResponsiveContainer>
         </AnimatedChart>
