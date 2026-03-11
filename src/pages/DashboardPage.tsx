@@ -70,6 +70,16 @@ export function DashboardPage() {
     return { from, to };
   }, [getWindow]);
 
+  const getProgressPercent = useCallback((phase: string, current: number, total: number) => {
+    const t = total > 0 ? current / total : 0;
+    if (phase.startsWith("odata")) return 10 + t * 35;
+    if (phase === "devices") return 5;
+    if (phase === "trips") return 10 + t * 35;
+    if (phase === "safety") return 45 + t * 35;
+    if (phase === "faults") return 80 + t * 20;
+    return 5 + t * 90;
+  }, []);
+
   const refresh = useCallback(async () => {
     if (!api || !server || !database) return;
     setLoading(true);
@@ -328,18 +338,47 @@ export function DashboardPage() {
             width: "100%",
             padding: zenith.spacing,
             display: "flex",
-            alignItems: "center",
+            flexDirection: "column",
             gap: zenith.spacing,
             backgroundColor: "white",
             borderBottom: `1px solid ${zenith.neutral100}`,
           }}
         >
-          <Waiting />
-          {progress && (
-            <span style={{ fontSize: 12, color: zenith.neutral500 }}>
-              {progress} {progressVal.total > 1 ? `${progressVal.current}/${progressVal.total}` : ""}
+          <div style={{ display: "flex", alignItems: "center", gap: zenith.spacing }}>
+            <Waiting />
+            <span style={{ fontSize: 13, color: zenith.neutral900 }}>
+              {progress}
+              {progressVal.total > 1 && (
+                <span style={{ marginLeft: 8, color: zenith.neutral500 }}>
+                  ({progressVal.current}/{progressVal.total})
+                </span>
+              )}
             </span>
-          )}
+            <span style={{ fontSize: 13, fontWeight: 600, color: zenith.primary }}>
+              {Math.round(getProgressPercent(progress ?? "", progressVal.current, progressVal.total))}%
+            </span>
+          </div>
+          <div
+            style={{
+              height: 6,
+              backgroundColor: zenith.neutral100,
+              borderRadius: 3,
+              overflow: "hidden",
+            }}
+          >
+            <motion.div
+              initial={{ width: "0%" }}
+              animate={{
+                width: `${Math.round(getProgressPercent(progress ?? "", progressVal.current, progressVal.total))}%`,
+              }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              style={{
+                height: "100%",
+                backgroundColor: zenith.primary,
+                borderRadius: 3,
+              }}
+            />
+          </div>
         </motion.div>
       )}
 
