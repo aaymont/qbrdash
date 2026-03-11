@@ -14,6 +14,8 @@ interface PieChartCardProps {
   outerRadius?: number;
   innerRadius?: number;
   label?: (item: { name: string; value: number; pct?: number }) => string;
+  /** Hide labels on pie segments to avoid clipping in narrow containers */
+  hideLabels?: boolean;
 }
 
 export function PieChartCard({
@@ -22,6 +24,7 @@ export function PieChartCard({
   outerRadius = 80,
   innerRadius,
   label,
+  hideLabels = false,
 }: PieChartCardProps) {
   const defaultLabel = ({ name, value, pct }: { name: string; value: number; pct?: number }) =>
     `${name}: ${formatValue(value)}${pct != null ? ` (${pct.toFixed(1)}%)` : ""}`;
@@ -29,7 +32,7 @@ export function PieChartCard({
   return (
     <AnimatedChart>
       <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+        <PieChart margin={hideLabels ? undefined : { top: 24, right: 120, bottom: 24, left: 120 }}>
           <Pie
             data={data}
             dataKey="value"
@@ -39,7 +42,7 @@ export function PieChartCard({
             outerRadius={outerRadius}
             innerRadius={innerRadius}
             paddingAngle={innerRadius ? 2 : undefined}
-            label={label ?? defaultLabel}
+            label={hideLabels ? false : (label ?? defaultLabel)}
           >
             {data.map((e, i) => (
               <Cell key={i} fill={e.color} />

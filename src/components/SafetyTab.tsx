@@ -5,6 +5,7 @@ import { zenith } from "@/lib/theme";
 import { KpiTile } from "./KpiTile";
 import { DrilldownTable } from "./DrilldownTable";
 import { DetailDrawer } from "./DetailDrawer";
+import { VehicleSafetyDrawer } from "./details/VehicleSafetyDrawer";
 import { InsightsPanel } from "./InsightsPanel";
 import { SectionTitle } from "./ui/SectionTitle";
 import { ChartCard } from "./ui/ChartCard";
@@ -282,12 +283,37 @@ export function SafetyTab({ data }: { data: DataPayload }) {
         open={!!drawerDevice}
         onClose={() => setDrawerDevice(null)}
         title={deviceMap.get(drawerDevice ?? "") ?? "Vehicle safety"}
+        width={420}
       >
-        {drawerDevice && (
-          <p style={{ fontSize: 14, color: zenith.neutral500 }}>
-            Events for this vehicle in selected period.
-          </p>
-        )}
+        {drawerDevice && (() => {
+          const v = byDevice.get(drawerDevice);
+          if (!v) {
+            return (
+              <p style={{ fontSize: 14, color: zenith.neutral500 }}>
+                No safety data for this vehicle.
+              </p>
+            );
+          }
+          const totalEvents = EVENT_CATEGORIES.reduce((s, c) => s + v[c].count, 0);
+          const recentForDevice = s.rawExceptions
+            .filter((ex) => ex.device?.id === drawerDevice)
+            .slice(0, 10)
+            .map((ex) => ({
+              date: ex.activeFrom ?? "",
+              ruleName: s.ruleNames[ex.rule?.id ?? ""] ?? "Unknown",
+            }));
+          return (
+            <VehicleSafetyDrawer
+              totalEvents={totalEvents}
+              speeding={v.Speeding.count}
+              harshBraking={v["Harsh braking"].count}
+              harshCornering={v["Harsh cornering"].count}
+              harshAcceleration={v["Harsh acceleration"].count}
+              other={v.Other.count}
+              recentEvents={recentForDevice}
+            />
+          );
+        })()}
       </DetailDrawer>
     </div>
   );
