@@ -47,7 +47,7 @@ export function VerticalBarChart<T extends object>({
           <CartesianGrid strokeDasharray="3 3" stroke={zenith.neutral100} vertical={false} />
           <XAxis dataKey={nameKey} tick={{ fill: zenith.neutral500, fontSize: 12 }} />
           <YAxis tick={{ fill: zenith.neutral500, fontSize: 12 }} allowDecimals={false} />
-          <Tooltip content={tooltipContent} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
+          <Tooltip content={tooltipContent as never} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
           {bars ? (
             bars.map((b) => (
               <Bar key={b.dataKey} dataKey={b.dataKey} fill={b.fill} name={b.name} radius={[4, 4, 0, 0]} />
