@@ -1,3 +1,4 @@
+import { formatDuration } from "@/lib/formatters";
 import { useDistanceUnit } from "@/context/DistanceUnitContext";
 import { Button } from "@geotab/zenith";
 
@@ -21,6 +22,13 @@ export function PrintView({ data, client, onClose }: PrintViewProps) {
   const u = data.utilization;
   const s = data.safety;
   const f = data.faults;
+
+  const speedingRules = Object.entries(s.byRule).filter(([, v]) =>
+    v.name.toLowerCase().includes("speeding")
+  );
+  const speedingCount = speedingRules.reduce((acc, [, v]) => acc + v.count, 0);
+  const speedingDuration = speedingRules.reduce((acc, [, v]) => acc + v.totalDurationSeconds, 0);
+  const totalSpeedingDuration = speedingDuration + s.speedProxySeconds;
 
   const handlePrint = () => {
     window.print();
@@ -77,7 +85,7 @@ export function PrintView({ data, client, onClose }: PrintViewProps) {
         Safety
       </h2>
       <p style={{ fontSize: 14, color: zenith.neutral900, margin: "8px 0 0 0" }}>
-        Total events: {s.totalEvents} | Rule types: {Object.keys(s.byRule).length} | Speeding proxy: {(s.speedProxySeconds / 60).toFixed(0)} min
+        Total events: {s.totalEvents} | Speeding: {speedingCount > 0 || s.speedProxySeconds > 0 ? formatDuration(totalSpeedingDuration) : "—"}
       </p>
 
       <h2 style={{ fontSize: 18, fontWeight: 600, marginTop: zenith.spacingLg, color: zenith.neutral900 }}>
