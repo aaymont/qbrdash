@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button, Banner, Waiting } from "@geotab/zenith";
 import { useAuth } from "@/context/AuthContext";
@@ -31,7 +32,7 @@ const zenith = {
 };
 
 export function DashboardPage() {
-  const { api, client, credentials, logout, forgetSession } = useAuth();
+  const { api, client, credentials, logout } = useAuth();
   const { unit, setUnit } = useDistanceUnit();
   const [data, setData] = useState<DataPayload | null>(null);
   const [loading, setLoading] = useState(false);
@@ -196,7 +197,6 @@ export function DashboardPage() {
           </button>
         </div>
         <div>
-          <label style={{ display: "block", fontSize: 11, marginBottom: 2, opacity: 0.9 }}>Window</label>
           <select
             value={windowPreset}
             onChange={(e) => setWindowPreset(Number(e.target.value))}
@@ -258,18 +258,65 @@ export function DashboardPage() {
           </>
         )}
 
-        <Button type="light" onClick={refresh} disabled={loading}>
-          Refresh
-        </Button>
-        <Button type="light" onClick={() => setShowPrint(true)}>
-          Print QBR
-        </Button>
-        <Button type="tertiary" onClick={forgetSession}>
-          Forget session
-        </Button>
-        <Button type="light" onClick={logout}>
-          Logout
-        </Button>
+        {[
+          { key: "refresh", label: "Refresh", onClick: () => refresh(), disabled: loading },
+        ].map(({ key, label, onClick, disabled }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            style={{
+              padding: "6px 12px",
+              fontSize: 14,
+              fontFamily: zenith.fontFamily,
+              color: "white",
+              backgroundColor: "rgba(255,255,255,0.2)",
+              border: "1px solid rgba(255,255,255,0.5)",
+              borderRadius: 4,
+              cursor: disabled ? "not-allowed" : "pointer",
+              opacity: disabled ? 0.6 : 1,
+            }}
+          >
+            {label}
+          </button>
+        ))}
+        <Link
+          to="/admin"
+          style={{
+            padding: "6px 12px",
+            fontSize: 14,
+            fontFamily: zenith.fontFamily,
+            color: "white",
+            textDecoration: "none",
+            backgroundColor: "rgba(255,255,255,0.2)",
+            border: "1px solid rgba(255,255,255,0.5)",
+            borderRadius: 4,
+          }}
+        >
+          Admin
+        </Link>
+        {[
+          { key: "logout", label: "Logout", onClick: logout },
+        ].map(({ key, label, onClick }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={onClick}
+            style={{
+              padding: "6px 12px",
+              fontSize: 14,
+              fontFamily: zenith.fontFamily,
+              color: "white",
+              backgroundColor: "rgba(255,255,255,0.2)",
+              border: "1px solid rgba(255,255,255,0.5)",
+              borderRadius: 4,
+              cursor: "pointer",
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </header>
 
       {loading && (

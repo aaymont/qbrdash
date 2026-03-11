@@ -8,6 +8,7 @@ import { DistanceUnitProvider } from "@/context/DistanceUnitContext";
 import { AnimatedPage } from "@/components/Animated";
 import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { AdminPage } from "@/pages/AdminPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -36,6 +37,16 @@ function AppRoutes() {
             <PrivateRoute>
               <AnimatedPage>
                 <DashboardPage />
+              </AnimatedPage>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <PrivateRoute>
+              <AnimatedPage>
+                <AdminPage />
               </AnimatedPage>
             </PrivateRoute>
           }

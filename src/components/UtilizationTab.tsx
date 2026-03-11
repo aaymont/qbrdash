@@ -1,38 +1,18 @@
 import { useState } from "react";
 import { useDistanceUnit } from "@/context/DistanceUnitContext";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import { formatHours } from "@/lib/formatters";
+import { zenith } from "@/lib/theme";
 import { KpiTile } from "./KpiTile";
-import { AnimatedChart } from "./Animated";
 import { DrilldownTable } from "./DrilldownTable";
 import { DetailDrawer } from "./DetailDrawer";
 import { InsightsPanel } from "./InsightsPanel";
+import { SectionTitle } from "./ui/SectionTitle";
+import { ChartCard } from "./ui/ChartCard";
+import { KpiGrid } from "./ui/KpiGrid";
+import { HorizontalBarChart } from "./charts/HorizontalBarChart";
+import { PieChartCard } from "./charts/PieChartCard";
+import { VehicleUtilizationDrawer } from "./details/VehicleUtilizationDrawer";
 import type { DataPayload } from "@/features/dataService";
-
-const zenith = {
-  primary: "var(--zenith-primary, #0078D4)",
-  neutral100: "var(--zenith-neutral-100, #EDEBE9)",
-  neutral500: "var(--zenith-neutral-500, #605E5C)",
-  neutral700: "var(--zenith-neutral-700, #3B3A39)",
-  neutral900: "var(--zenith-neutral-900, #201F1E)",
-  spacing: "var(--zenith-spacing-md, 16px)",
-  spacingLg: "var(--zenith-spacing-lg, 24px)",
-  fontFamily: "var(--zenith-font-family, 'Segoe UI', sans-serif)",
-};
-
-function formatHours(sec: number) {
-  return `${(sec / 3600).toFixed(1)} h`;
-}
 
 type ChartMetric = "distance" | "driving" | "idle" | "daysUsed";
 
@@ -183,164 +163,76 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
     { action: "Driver coaching", kpi: "Idle/vehicle", target: "-20%", owner: "Safety", dueDate: "TBD" },
   ];
 
+  const formatBarValue = (payload: (ChartRow & { pct?: number }) | undefined, _value: unknown) => {
+    if (!payload) return "";
+    if (selectedChartMetric === "distance") return formatDistance(payload.distanceKm);
+    if (selectedChartMetric === "driving") return formatHours(payload.drivingSeconds);
+    if (selectedChartMetric === "idle") return formatHours(payload.idlingSeconds);
+    return `${payload.daysUsed} days`;
+  };
+
+  const barName =
+    selectedChartMetric === "distance"
+      ? `Distance (${unit})`
+      : selectedChartMetric === "daysUsed"
+      ? "Days used"
+      : selectedChartMetric === "driving"
+      ? "Driving (h)"
+      : "Idle (h)";
+
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: zenith.spacing,
-        }}
-      >
-        <div style={{ flex: "1 1 0", minWidth: 140 }}>
-          <KpiTile
-            title="Total distance"
-            value={formatDistance(u.totalDistanceKm)}
-            index={0}
-            selected={selectedChartMetric === "distance"}
-            onClick={() => setSelectedChartMetric("distance")}
-          />
-        </div>
-        <div style={{ flex: "1 1 0", minWidth: 140 }}>
-          <KpiTile
-            title="Driving time"
-            value={formatHours(u.totalDrivingSeconds)}
-            index={1}
-            selected={selectedChartMetric === "driving"}
-            onClick={() => setSelectedChartMetric("driving")}
-          />
-        </div>
-        <div style={{ flex: "1 1 0", minWidth: 140 }}>
-          <KpiTile
-            title="Idle time"
-            value={formatHours(u.totalIdlingSeconds)}
-            index={2}
-            selected={selectedChartMetric === "idle"}
-            onClick={() => setSelectedChartMetric("idle")}
-          />
-        </div>
-        <div style={{ flex: "1 1 0", minWidth: 140 }}>
-          <KpiTile
-            title="Active vehicles"
-            value={Object.keys(u.byDevice).length}
-            index={3}
-            selected={selectedChartMetric === "daysUsed"}
-            onClick={() => setSelectedChartMetric("daysUsed")}
-          />
-        </div>
-      </div>
+      <KpiGrid variant="flex">
+        <KpiTile
+          title="Total distance"
+          value={formatDistance(u.totalDistanceKm)}
+          index={0}
+          selected={selectedChartMetric === "distance"}
+          onClick={() => setSelectedChartMetric("distance")}
+        />
+        <KpiTile
+          title="Driving time"
+          value={formatHours(u.totalDrivingSeconds)}
+          index={1}
+          selected={selectedChartMetric === "driving"}
+          onClick={() => setSelectedChartMetric("driving")}
+        />
+        <KpiTile
+          title="Idle time"
+          value={formatHours(u.totalIdlingSeconds)}
+          index={2}
+          selected={selectedChartMetric === "idle"}
+          onClick={() => setSelectedChartMetric("idle")}
+        />
+        <KpiTile
+          title="Active vehicles"
+          value={Object.keys(u.byDevice).length}
+          index={3}
+          selected={selectedChartMetric === "daysUsed"}
+          onClick={() => setSelectedChartMetric("daysUsed")}
+        />
+      </KpiGrid>
 
-      <h3 style={{ marginTop: zenith.spacingLg, marginBottom: zenith.spacing, fontSize: 16, fontWeight: 600, fontFamily: zenith.fontFamily, color: zenith.neutral900 }}>
-        {cfg.title}
-      </h3>
-      <div style={{ height: 340, backgroundColor: "white", borderRadius: 8, padding: zenith.spacing, border: `1px solid ${zenith.neutral100}` }}>
-        <AnimatedChart>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} layout="vertical" margin={{ left: 80 }}>
-              <defs>
-                <linearGradient id="distanceBarGradient" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#d32f2f" />
-                  <stop offset="100%" stopColor="#2e7d32" />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={zenith.neutral100} />
-              <XAxis type="number" unit={effectiveUnit} tick={{ fill: zenith.neutral700 }} />
-              <YAxis type="category" dataKey="name" width={120} interval={0} tick={{ fill: zenith.neutral700 }} />
-              <Tooltip
-                formatter={(_, __, item) => {
-                  const payload = item?.payload as (ChartRow & { pct?: number }) | undefined;
-                  if (!payload) return "";
-                  let val: string;
-                  if (selectedChartMetric === "distance") val = formatDistance(payload.distanceKm);
-                  else if (selectedChartMetric === "driving") val = formatHours(payload.drivingSeconds);
-                  else if (selectedChartMetric === "idle") val = formatHours(payload.idlingSeconds);
-                  else val = `${payload.daysUsed} days`;
-                  const pct = payload?.pct != null ? ` (${payload.pct.toFixed(1)}%)` : "";
-                  return val + pct;
-                }}
-              />
-              <Bar
-                dataKey={cfg.dataKey}
-                fill="url(#distanceBarGradient)"
-                name={
-                  selectedChartMetric === "distance"
-                    ? `Distance (${unit})`
-                    : selectedChartMetric === "daysUsed"
-                    ? "Days used"
-                    : selectedChartMetric === "driving"
-                    ? "Driving (h)"
-                    : "Idle (h)"
-                }
-                label={(props) => {
-                  const { x, y, width, height, value = 0, payload } = props;
-                  const p = payload as ChartRow & { pct?: number };
-                  let text: string;
-                  if (selectedChartMetric === "distance") {
-                    const km = p?.distanceKm ?? (unit === "mi" ? (value as number) / 0.621371 : (value as number));
-                    text = formatDistance(km);
-                  } else if (selectedChartMetric === "driving") {
-                    text = formatHours(p?.drivingSeconds ?? (value as number) * 3600);
-                  } else if (selectedChartMetric === "idle") {
-                    text = formatHours(p?.idlingSeconds ?? (value as number) * 3600);
-                  } else {
-                    text = `${p?.daysUsed ?? value} days`;
-                  }
-                  const pctLabel = p?.pct != null ? ` (${p.pct.toFixed(1)}%)` : "";
-                  return (
-                    <text
-                      x={(x ?? 0) + (width ?? 0) - 4}
-                      y={(y ?? 0) + (height ?? 0) / 2}
-                      textAnchor="end"
-                      dominantBaseline="middle"
-                      fill="white"
-                      style={{ fontWeight: 500, fontSize: 12 }}
-                    >
-                      {text}{pctLabel}
-                    </text>
-                  );
-                }}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </AnimatedChart>
-      </div>
+      <SectionTitle>{cfg.title}</SectionTitle>
+      <ChartCard height={340}>
+        <HorizontalBarChart<ChartRow & { pct?: number }>
+          data={chartData}
+          dataKey={cfg.dataKey}
+          unit={effectiveUnit}
+          gradientId="distanceBarGradient"
+          barName={barName}
+          yAxisWidth={120}
+          formatValue={formatBarValue}
+          showPct
+        />
+      </ChartCard>
 
-      <h3 style={{ marginTop: zenith.spacingLg, marginBottom: zenith.spacing, fontSize: 16, fontWeight: 600, fontFamily: zenith.fontFamily, color: zenith.neutral900 }}>
-        Time distribution (driving vs idle)
-      </h3>
-      <div style={{ height: 240, backgroundColor: "white", borderRadius: 8, padding: zenith.spacing, border: `1px solid ${zenith.neutral100}` }}>
-        <AnimatedChart>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                label={({ name, value, pct }: { name: string; value: number; pct?: number }) =>
-                  `${name}: ${formatHours(value)}${pct != null ? ` (${pct.toFixed(1)}%)` : ""}`
-                }
-              >
-                {pieData.map((e, i) => (
-                  <Cell key={i} fill={e.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(v: number, _: string, props: { payload?: { pct?: number } }) => {
-                  const pct = props?.payload?.pct;
-                  return formatHours(v) + (pct != null ? ` (${pct.toFixed(1)}%)` : "");
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </AnimatedChart>
-      </div>
+      <SectionTitle>Time distribution (driving vs idle)</SectionTitle>
+      <ChartCard height={240}>
+        <PieChartCard data={pieData} formatValue={formatHours} />
+      </ChartCard>
 
-      <h3 style={{ marginTop: zenith.spacingLg, marginBottom: zenith.spacing, fontSize: 16, fontWeight: 600, fontFamily: zenith.fontFamily, color: zenith.neutral900 }}>
-        Vehicle utilization
-      </h3>
+      <SectionTitle>Vehicle utilization</SectionTitle>
       <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: zenith.spacing, cursor: "pointer", fontFamily: zenith.fontFamily, fontSize: 14 }}>
         <input
           type="checkbox"
@@ -402,108 +294,13 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
         title={drawerRow?.name ?? "Vehicle detail"}
         width={420}
       >
-        {drawerRow && (() => {
-          const drawerTotal =
-            drawerRow.drivingSeconds + drawerRow.idlingSeconds;
-          const drawerPieData = [
-            {
-              name: "Driving",
-              value: drawerRow.drivingSeconds,
-              color: zenith.primary,
-              pct:
-                drawerTotal > 0
-                  ? (drawerRow.drivingSeconds / drawerTotal) * 100
-                  : 0,
-            },
-            {
-              name: "Idling",
-              value: drawerRow.idlingSeconds,
-              color: "#ed6c02",
-              pct:
-                drawerTotal > 0
-                  ? (drawerRow.idlingSeconds / drawerTotal) * 100
-                  : 0,
-            },
-          ].filter((d) => d.value > 0);
-          return (
-            <div style={{ display: "flex", flexDirection: "column", gap: zenith.spacing }}>
-              <div
-                style={{
-                  padding: zenith.spacing,
-                  textAlign: "center",
-                  backgroundColor: "rgba(0,0,0,0.04)",
-                  borderRadius: 8,
-                  border: `1px solid ${zenith.neutral100}`,
-                }}
-              >
-                <div style={{ fontSize: 11, color: zenith.neutral500 }}>Distance</div>
-                <div style={{ fontSize: 20, fontWeight: 600, marginTop: 4 }}>{formatDistance(drawerRow.distanceKm)}</div>
-              </div>
-              <div style={{ display: "flex", gap: zenith.spacing }}>
-                <div
-                  style={{
-                    flex: 1,
-                    padding: zenith.spacing,
-                    textAlign: "center",
-                    borderLeft: `3px solid ${zenith.primary}`,
-                    borderRadius: 4,
-                    border: `1px solid ${zenith.neutral100}`,
-                  }}
-                >
-                  <div style={{ fontSize: 11, color: zenith.neutral500 }}>Driving</div>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{formatHours(drawerRow.drivingSeconds)}</div>
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    padding: zenith.spacing,
-                    textAlign: "center",
-                    borderLeft: "3px solid #ed6c02",
-                    borderRadius: 4,
-                    border: `1px solid ${zenith.neutral100}`,
-                  }}
-                >
-                  <div style={{ fontSize: 11, color: zenith.neutral500 }}>Idling</div>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{formatHours(drawerRow.idlingSeconds)}</div>
-                </div>
-              </div>
-              <div style={{ fontSize: 12, color: zenith.neutral500 }}>Time distribution</div>
-              <div style={{ height: 200 }}>
-                <AnimatedChart>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={drawerPieData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={70}
-                        paddingAngle={2}
-                        label={({ name, value, pct }: { name: string; value: number; pct?: number }) =>
-                          value > 0
-                            ? `${name}: ${formatHours(value)}${pct != null ? ` (${pct.toFixed(1)}%)` : ""}`
-                            : ""
-                        }
-                      >
-                        {drawerPieData.map((e, i) => (
-                          <Cell key={i} fill={e.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(v: number, _: string, props: { payload?: { pct?: number } }) => {
-                          const pct = props?.payload?.pct;
-                          return formatHours(v) + (pct != null ? ` (${pct.toFixed(1)}%)` : "");
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </AnimatedChart>
-              </div>
-            </div>
-          );
-        })()}
+        {drawerRow && (
+          <VehicleUtilizationDrawer
+            distanceKm={drawerRow.distanceKm}
+            drivingSeconds={drawerRow.drivingSeconds}
+            idlingSeconds={drawerRow.idlingSeconds}
+          />
+        )}
       </DetailDrawer>
     </div>
   );

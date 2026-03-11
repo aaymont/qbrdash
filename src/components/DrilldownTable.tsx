@@ -1,15 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-
-const zenith = {
-  neutral100: "var(--zenith-neutral-100, #EDEBE9)",
-  neutral500: "var(--zenith-neutral-500, #605E5C)",
-  neutral700: "var(--zenith-neutral-700, #3B3A39)",
-  neutral900: "var(--zenith-neutral-900, #201F1E)",
-  primary: "var(--zenith-primary, #0078D4)",
-  spacing: "var(--zenith-spacing-md, 16px)",
-  fontFamily: "var(--zenith-font-family, 'Segoe UI', sans-serif)",
-};
+import { zenith } from "@/lib/theme";
 
 const MotionTableRow = motion.tr;
 

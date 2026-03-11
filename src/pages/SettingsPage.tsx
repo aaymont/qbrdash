@@ -1,12 +1,5 @@
 import { useState } from "react";
-
-const zenith = {
-  neutral100: "var(--zenith-neutral-100, #EDEBE9)",
-  neutral500: "var(--zenith-neutral-500, #605E5C)",
-  neutral900: "var(--zenith-neutral-900, #201F1E)",
-  primary: "var(--zenith-primary, #0078D4)",
-  fontFamily: "var(--zenith-font-family, 'Segoe UI', sans-serif)",
-};
+import { zenith } from "@/lib/theme";
 
 interface SettingsPageProps {
   ttlHours: number;

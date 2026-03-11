@@ -72,7 +72,54 @@ export async function clearCache(): Promise<void> {
 }
 
 export async function clearCacheForClient(server: string, database: string): Promise<void> {
-  const entries = await db.cache.where("server").equals(server).toArray();
-  const toDelete = entries.filter((e) => e.database === database).map((e) => e.id);
+  const all = await db.cache.toArray();
+  const toDelete = all
+    .filter((e) => e.server === server && e.database === database)
+    .map((e) => e.id);
   await db.cache.bulkDelete(toDelete);
+}
+
+export interface CachedClientSummary {
+  server: string;
+  database: string;
+  friendlyName: string;
+  entryCount: number;
+  totalSizeBytes: number;
+  cachedAt: number;
+  expiresAt: number;
+  status: "fresh" | "expired";
+}
+
+/** Returns all clients that have cached data, with aggregate stats. */
+export async function listCachedClients(
+  getFriendlyName: (server: string, database: string) => string
+): Promise<CachedClientSummary[]> {
+  const entries = await db.cache.toArray();
+  const byClient = new Map<string, CacheEntry[]>();
+  for (const e of entries) {
+    const key = `${e.server}|${e.database}`;
+    const list = byClient.get(key) ?? [];
+    list.push(e);
+    byClient.set(key, list);
+  }
+  const now = Date.now();
+  const result: CachedClientSummary[] = [];
+  for (const [key, list] of byClient) {
+    const [server, database] = key.split("|");
+    const totalSizeBytes = list.reduce((sum, e) => sum + JSON.stringify(e.data ?? {}).length, 0);
+    const latest = list.reduce((a, b) => (a.cachedAt > b.cachedAt ? a : b));
+    const earliestExpiry = list.reduce((a, b) => (a.expiresAt < b.expiresAt ? a : b));
+    const status = earliestExpiry.expiresAt > now ? "fresh" : "expired";
+    result.push({
+      server,
+      database,
+      friendlyName: getFriendlyName(server, database),
+      entryCount: list.length,
+      totalSizeBytes,
+      cachedAt: latest.cachedAt,
+      expiresAt: earliestExpiry.expiresAt,
+      status,
+    });
+  }
+  return result.sort((a, b) => b.cachedAt - a.cachedAt);
 }

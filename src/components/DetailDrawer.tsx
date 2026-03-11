@@ -1,12 +1,6 @@
 import { IconClose } from "@geotab/zenith";
+import { zenith } from "@/lib/theme";
 import { AnimatedDrawerContent } from "./Animated";
-
-const zenith = {
-  neutral100: "var(--zenith-neutral-100, #EDEBE9)",
-  neutral900: "var(--zenith-neutral-900, #201F1E)",
-  spacing: "var(--zenith-spacing-md, 16px)",
-  fontFamily: "var(--zenith-font-family, 'Segoe UI', sans-serif)",
-};
 
 interface DetailDrawerProps {
   open: boolean;

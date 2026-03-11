@@ -1,33 +1,15 @@
 import { useState } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { formatDuration } from "@/lib/formatters";
+import { zenith } from "@/lib/theme";
 import { KpiTile } from "./KpiTile";
-import { AnimatedChart } from "./Animated";
 import { DrilldownTable } from "./DrilldownTable";
 import { DetailDrawer } from "./DetailDrawer";
 import { InsightsPanel } from "./InsightsPanel";
+import { SectionTitle } from "./ui/SectionTitle";
+import { ChartCard } from "./ui/ChartCard";
+import { KpiGrid } from "./ui/KpiGrid";
+import { VerticalBarChart } from "./charts/VerticalBarChart";
 import type { DataPayload } from "@/features/dataService";
-
-const zenith = {
-  neutral100: "var(--zenith-neutral-100, #EDEBE9)",
-  neutral500: "var(--zenith-neutral-500, #605E5C)",
-  neutral900: "var(--zenith-neutral-900, #201F1E)",
-  spacing: "var(--zenith-spacing-md, 16px)",
-  spacingLg: "var(--zenith-spacing-lg, 24px)",
-  fontFamily: "var(--zenith-font-family, 'Segoe UI', sans-serif)",
-};
-
-function formatDuration(sec: number) {
-  if (sec < 60) return `${sec}s`;
-  return `${(sec / 60).toFixed(0)}m`;
-}
 
 export function SafetyTab({ data }: { data: DataPayload }) {
   const [drawerDevice, setDrawerDevice] = useState<string | null>(null);
@@ -78,7 +60,7 @@ export function SafetyTab({ data }: { data: DataPayload }) {
 
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: zenith.spacing }}>
+      <KpiGrid>
         <KpiTile title="Total events" value={s.totalEvents} index={0} />
         <KpiTile title="Rule types" value={Object.keys(s.byRule).length} index={1} />
         <div title={s.speedProxyLabel || ""}>
@@ -92,28 +74,19 @@ export function SafetyTab({ data }: { data: DataPayload }) {
         {Object.entries(s.byRule).slice(0, 3).map(([ruleId, v], i) => (
           <KpiTile key={ruleId} title={v.name} value={v.count} index={3 + i} />
         ))}
-      </div>
+      </KpiGrid>
 
-      <h3 style={{ marginTop: zenith.spacingLg, marginBottom: zenith.spacing, fontSize: 16, fontWeight: 600, fontFamily: zenith.fontFamily, color: zenith.neutral900 }}>
-        Events by rule type
-      </h3>
-      <div style={{ height: 280, backgroundColor: "white", borderRadius: 8, padding: zenith.spacing, border: `1px solid ${zenith.neutral100}` }}>
-        <AnimatedChart>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={byRuleChart}>
-              <CartesianGrid strokeDasharray="3 3" stroke={zenith.neutral100} />
-              <XAxis dataKey="name" tick={{ fill: zenith.neutral500 }} />
-              <YAxis tick={{ fill: zenith.neutral500 }} />
-              <RechartsTooltip />
-              <Bar dataKey="count" fill="#d32f2f" name="Count" />
-            </BarChart>
-          </ResponsiveContainer>
-        </AnimatedChart>
-      </div>
+      <SectionTitle>Events by rule type</SectionTitle>
+      <ChartCard>
+        <VerticalBarChart
+          data={byRuleChart}
+          dataKey="count"
+          barFill="#d32f2f"
+          barName="Count"
+        />
+      </ChartCard>
 
-      <h3 style={{ marginTop: zenith.spacingLg, marginBottom: zenith.spacing, fontSize: 16, fontWeight: 600, fontFamily: zenith.fontFamily, color: zenith.neutral900 }}>
-        Recent events
-      </h3>
+      <SectionTitle>Recent events</SectionTitle>
       <DrilldownTable
         rows={tableRows}
         columns={[

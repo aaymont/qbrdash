@@ -1,14 +1,10 @@
+import { zenith } from "@/lib/theme";
 import { AnimatedCard } from "./Animated";
 
-const zenith = {
-  primary: "var(--zenith-primary, #0078D4)",
-  neutral100: "var(--zenith-neutral-100, #EDEBE9)",
-  neutral500: "var(--zenith-neutral-500, #605E5C)",
-  neutral900: "var(--zenith-neutral-900, #201F1E)",
+const zenithExtended = {
+  ...zenith,
   success: "var(--zenith-success, #107C10)",
   error: "var(--zenith-error, #D13438)",
-  spacing: "var(--zenith-spacing-md, 16px)",
-  fontFamily: "var(--zenith-font-family, 'Segoe UI', sans-serif)",
 };
 
 interface KpiTileProps {
@@ -30,7 +26,7 @@ export function KpiTile({ title, value, subtitle, trend, index = 0, selected, on
         style={{
           padding: zenith.spacing,
           borderRadius: 8,
-          border: `1px solid ${selected ? zenith.primary : zenith.neutral100}`,
+          border: `1px solid ${selected ? zenithExtended.primary : zenithExtended.neutral100}`,
           borderWidth: selected ? 2 : 1,
           height: "100%",
           width: "100%",
@@ -53,9 +49,9 @@ export function KpiTile({ title, value, subtitle, trend, index = 0, selected, on
                 marginLeft: 4,
                 color:
                   trend === "up"
-                    ? zenith.success
+                    ? zenithExtended.success
                     : trend === "down"
-                    ? zenith.error
+                    ? zenithExtended.error
                     : zenith.neutral500,
               }}
             >
