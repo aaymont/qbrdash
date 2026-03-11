@@ -191,9 +191,11 @@ function mergeRowIntoAgg(agg: UtilizationAggregates, row: VehicleKpiRow): void {
       afterHoursDistanceKm: 0,
       tripCount: 0,
       speedProxySeconds: 0,
+      daysUsed: 0,
     };
   }
   agg.byDevice[deviceId].distanceKm += dist;
+  agg.byDevice[deviceId].daysUsed += 1;
   agg.byDevice[deviceId].drivingSeconds += drive;
   agg.byDevice[deviceId].idlingSeconds += idle;
   agg.byDevice[deviceId].stopSeconds += stop;

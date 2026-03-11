@@ -24,8 +24,54 @@ function formatHours(sec: number) {
   return `${(sec / 3600).toFixed(1)} h`;
 }
 
+type ChartMetric = "distance" | "driving" | "idle" | "daysUsed";
+
+interface ChartRow {
+  name: string;
+  deviceId: string;
+  distance: number;
+  distanceKm: number;
+  driving: number;
+  drivingSeconds: number;
+  idle: number;
+  idlingSeconds: number;
+  daysUsed: number;
+  trips: number;
+}
+
+const CHART_CONFIG: Record<
+  ChartMetric,
+  { title: string; dataKey: keyof ChartRow; sortKey: keyof ChartRow; unit: string }
+> = {
+  distance: {
+    title: "Distance by vehicle (top 10)",
+    dataKey: "distance",
+    sortKey: "distance",
+    unit: " km",
+  },
+  driving: {
+    title: "Driving time by vehicle (top 10)",
+    dataKey: "driving",
+    sortKey: "driving",
+    unit: " h",
+  },
+  idle: {
+    title: "Idle time by vehicle (top 10)",
+    dataKey: "idle",
+    sortKey: "idle",
+    unit: " h",
+  },
+  daysUsed: {
+    title: "Days used by vehicle (top 10)",
+    dataKey: "daysUsed",
+    sortKey: "daysUsed",
+    unit: " days",
+  },
+};
+
 export function UtilizationTab({ data }: { data: DataPayload }) {
   const { formatDistance, toDisplayValue, unit } = useDistanceUnit();
+  const [selectedChartMetric, setSelectedChartMetric] = useState<ChartMetric>("distance");
   const [excludeZeroDistance, setExcludeZeroDistance] = useState(false);
   const [drawerRow, setDrawerRow] = useState<{
     deviceId: string;
@@ -38,15 +84,24 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
 
   const u = data.utilization;
   const deviceMap = new Map(data.devices.map((d) => [d.id, d.name]));
+  const cfg = CHART_CONFIG[selectedChartMetric];
+  const displayUnit = unit === "mi" ? " mi" : " km";
+  const effectiveUnit = selectedChartMetric === "distance" ? displayUnit : cfg.unit;
 
   const chartData = Object.entries(u.byDevice)
     .map(([id, v]) => ({
       name: deviceMap.get(id) ?? id.slice(0, 8),
+      deviceId: id,
       distance: toDisplayValue(v.distanceKm),
       distanceKm: v.distanceKm,
+      driving: v.drivingSeconds / 3600,
+      drivingSeconds: v.drivingSeconds,
+      idle: v.idlingSeconds / 3600,
+      idlingSeconds: v.idlingSeconds,
+      daysUsed: v.daysUsed ?? 0,
       trips: v.tripCount,
     }))
-    .sort((a, b) => b.distance - a.distance)
+    .sort((a, b) => (b[cfg.sortKey] as number) - (a[cfg.sortKey] as number))
     .slice(0, 10);
 
   const pieData = [
@@ -104,14 +159,38 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
           "& > *": { flex: "1 1 0", minWidth: 140 },
         }}
       >
-        <KpiTile title="Total distance" value={formatDistance(u.totalDistanceKm)} index={0} />
-        <KpiTile title="Driving time" value={formatHours(u.totalDrivingSeconds)} index={1} />
-        <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={2} />
-        <KpiTile title="Active vehicles" value={Object.keys(u.byDevice).length} index={3} />
+        <KpiTile
+          title="Total distance"
+          value={formatDistance(u.totalDistanceKm)}
+          index={0}
+          selected={selectedChartMetric === "distance"}
+          onClick={() => setSelectedChartMetric("distance")}
+        />
+        <KpiTile
+          title="Driving time"
+          value={formatHours(u.totalDrivingSeconds)}
+          index={1}
+          selected={selectedChartMetric === "driving"}
+          onClick={() => setSelectedChartMetric("driving")}
+        />
+        <KpiTile
+          title="Idle time"
+          value={formatHours(u.totalIdlingSeconds)}
+          index={2}
+          selected={selectedChartMetric === "idle"}
+          onClick={() => setSelectedChartMetric("idle")}
+        />
+        <KpiTile
+          title="Active vehicles"
+          value={Object.keys(u.byDevice).length}
+          index={3}
+          selected={selectedChartMetric === "daysUsed"}
+          onClick={() => setSelectedChartMetric("daysUsed")}
+        />
       </Box>
 
       <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
-        Distance by vehicle (top 10)
+        {cfg.title}
       </Typography>
       <Box sx={{ height: 340 }}>
         <AnimatedChart>
@@ -124,25 +203,43 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" unit={unit === "mi" ? " mi" : " km"} />
+            <XAxis type="number" unit={effectiveUnit} />
             <YAxis type="category" dataKey="name" width={120} interval={0} />
             <Tooltip
               formatter={(_, __, item) => {
-                const payload = (item as { payload?: { distanceKm?: number } })
-                  ?.payload;
-                return formatDistance(payload?.distanceKm ?? 0);
+                const payload = (item as { payload?: ChartRow })?.payload;
+                if (!payload) return "";
+                if (selectedChartMetric === "distance") return formatDistance(payload.distanceKm);
+                if (selectedChartMetric === "driving") return formatHours(payload.drivingSeconds);
+                if (selectedChartMetric === "idle") return formatHours(payload.idlingSeconds);
+                return `${payload.daysUsed} days`;
               }}
             />
             <Bar
-              dataKey="distance"
+              dataKey={cfg.dataKey}
               fill="url(#distanceBarGradient)"
-              name={`Distance (${unit})`}
+              name={
+                selectedChartMetric === "distance"
+                  ? `Distance (${unit})`
+                  : selectedChartMetric === "daysUsed"
+                    ? "Days used"
+                    : selectedChartMetric === "driving"
+                      ? "Driving (h)"
+                      : "Idle (h)"
+              }
               label={(props) => {
                 const { x, y, width, height, value = 0, payload } = props;
-                const km =
-                  (payload?.distanceKm as number | undefined) ??
-                  (unit === "mi" ? (value as number) / 0.621371 : (value as number));
-                const text = formatDistance(km);
+                let text: string;
+                if (selectedChartMetric === "distance") {
+                  const km = payload?.distanceKm ?? (unit === "mi" ? (value as number) / 0.621371 : (value as number));
+                  text = formatDistance(km);
+                } else if (selectedChartMetric === "driving") {
+                  text = formatHours(payload?.drivingSeconds ?? (value as number) * 3600);
+                } else if (selectedChartMetric === "idle") {
+                  text = formatHours(payload?.idlingSeconds ?? (value as number) * 3600);
+                } else {
+                  text = `${payload?.daysUsed ?? value} days`;
+                }
                 return (
                   <text
                     x={(x ?? 0) + (width ?? 0) - 4}

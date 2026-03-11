@@ -124,6 +124,7 @@ export interface UtilizationAggregates {
       afterHoursDistanceKm: number;
       tripCount: number;
       speedProxySeconds: number;
+      daysUsed: number;
     }
   >;
   rawTrips: TripRecord[];
@@ -144,6 +145,7 @@ export function aggregateTrips(trips: TripRecord[]): UtilizationAggregates {
     return new Date(a.start).getTime() - new Date(b.start).getTime();
   });
   const prevEngineHoursByDevice = new Map<string, number>();
+  const daysUsedByDevice = new Map<string, Set<number>>();
 
   let totalDistanceKm = 0;
   let totalDrivingSeconds = 0;
@@ -212,6 +214,10 @@ export function aggregateTrips(trips: TripRecord[]): UtilizationAggregates {
     speedRange3Count += sr3;
     speedRange3DurationSeconds += sr3Dur;
 
+    const dayKey = t.start ? Math.floor(new Date(t.start).getTime() / 86400000) : 0;
+    if (!daysUsedByDevice.has(deviceId)) daysUsedByDevice.set(deviceId, new Set());
+    daysUsedByDevice.get(deviceId)!.add(dayKey);
+
     if (!byDevice[deviceId]) {
       byDevice[deviceId] = {
         distanceKm: 0,
@@ -221,6 +227,7 @@ export function aggregateTrips(trips: TripRecord[]): UtilizationAggregates {
         afterHoursDistanceKm: 0,
         tripCount: 0,
         speedProxySeconds: 0,
+        daysUsed: 0,
       };
     }
     byDevice[deviceId].distanceKm += dist;
@@ -230,6 +237,10 @@ export function aggregateTrips(trips: TripRecord[]): UtilizationAggregates {
     byDevice[deviceId].afterHoursDistanceKm += ahDist;
     byDevice[deviceId].tripCount += 1;
     byDevice[deviceId].speedProxySeconds += speedProxySeconds;
+  }
+
+  for (const [deviceId, days] of daysUsedByDevice) {
+    if (byDevice[deviceId]) byDevice[deviceId].daysUsed = days.size;
   }
 
   return {
