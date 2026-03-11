@@ -1,0 +1,44 @@
+/**
+ * Zenith design token overrides and layout utilities.
+ * Uses Zenith CSS variables for MyGeotab-consistent styling.
+ * @see .cursor/skills/geotab/references/ZENITH_STYLING.md
+ */
+
+:root {
+  /* Zenith design tokens (fallbacks if not in Zenith dist) */
+  --zenith-primary: #0078D4;
+  --zenith-primary-dark: #005A9E;
+  --zenith-success: #107C10;
+  --zenith-warning: #FFB900;
+  --zenith-error: #D13438;
+  --zenith-neutral-100: #EDEBE9;
+  --zenith-neutral-500: #605E5C;
+  --zenith-neutral-700: #3B3A39;
+  --zenith-neutral-900: #201F1E;
+  --zenith-spacing-xs: 4px;
+  --zenith-spacing-sm: 8px;
+  --zenith-spacing-md: 16px;
+  --zenith-spacing-lg: 24px;
+  --zenith-spacing-xl: 32px;
+  --zenith-font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  --zenith-font-size-sm: 12px;
+  --zenith-font-size-md: 14px;
+  --zenith-font-size-lg: 16px;
+  --zenith-font-size-xxl: 28px;
+  --zenith-font-weight-bold: 700;
+  --zenith-font-weight-semibold: 600;
+}
+
+body {
+  font-family: var(--zenith-font-family);
+  color: var(--zenith-neutral-900);
+  background-color: var(--zenith-neutral-100);
+}
+
+.zen-button-full-width {
+  width: 100%;
+}
+
+.zen-button-full-width button {
+  width: 100%;
+}

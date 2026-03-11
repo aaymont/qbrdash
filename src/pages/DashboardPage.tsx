@@ -1,28 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Box,
-  AppBar,
-  Toolbar,
-  Typography,
-  IconButton,
-  Button,
-  Tabs,
-  Tab,
-  LinearProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
-  Alert,
-} from "@mui/material";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import PrintIcon from "@mui/icons-material/Print";
-import LogoutIcon from "@mui/icons-material/Logout";
+import { Button, Banner, Waiting } from "@geotab/zenith";
 import { useAuth } from "@/context/AuthContext";
 import { useDistanceUnit } from "@/context/DistanceUnitContext";
 import { loadData, getCachedDataForDisplay, clearCache, clearCacheForClient, type DataPayload, type DateWindow } from "@/features/dataService";
@@ -41,6 +19,16 @@ const PRESETS = [
   { label: "30 days", days: 30 },
   { label: "90 days", days: 90 },
 ];
+
+const zenith = {
+  spacing: "var(--zenith-spacing-md, 16px)",
+  spacingLg: "var(--zenith-spacing-lg, 24px)",
+  neutral100: "var(--zenith-neutral-100, #EDEBE9)",
+  neutral500: "var(--zenith-neutral-500, #605E5C)",
+  neutral900: "var(--zenith-neutral-900, #201F1E)",
+  primary: "var(--zenith-primary, #0078D4)",
+  fontFamily: "var(--zenith-font-family, 'Segoe UI', sans-serif)",
+};
 
 export function DashboardPage() {
   const { api, client, credentials, logout, forgetSession } = useAuth();
@@ -142,149 +130,241 @@ export function DashboardPage() {
     return null;
   }
 
+  const TAB_LABELS = ["Utilization", "Safety", "Optimization", "Maintenance"];
+
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+    <div style={{ minHeight: "100vh", backgroundColor: zenith.neutral100, fontFamily: zenith.fontFamily }}>
       {isDataStale && (
-        <Alert
-          severity="warning"
-          icon={<WarningAmberIcon />}
-          sx={{ borderRadius: 0 }}
-          action={
-            <Button color="inherit" size="small" onClick={refresh}>
-              Refresh
-            </Button>
-          }
+        <Banner
+          type="warning"
+          action={{ text: "Refresh", onClick: refresh }}
         >
           Data is more than {STALE_DAYS} days old. Refresh for the latest.
-        </Alert>
+        </Banner>
       )}
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Geotab QBR Insights — {client.friendlyName}
-            {typeof __APP_VERSION__ !== "undefined" && (
-              <Box component="span" sx={{ ml: 0.5, fontSize: "0.75em", opacity: 0.85 }}>
-                v{__APP_VERSION__}
-              </Box>
-            )}
-          </Typography>
+      <header
+        style={{
+          backgroundColor: zenith.primary,
+          color: "white",
+          padding: `${zenith.spacing} ${zenith.spacingLg}`,
+          display: "flex",
+          alignItems: "center",
+          gap: zenith.spacing,
+          flexWrap: "wrap",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+        }}
+      >
+        <h1 style={{ flex: 1, margin: 0, fontSize: "18px", fontWeight: 600 }}>
+          Geotab QBR Insights — {client.friendlyName}
+          {typeof __APP_VERSION__ !== "undefined" && (
+            <span style={{ marginLeft: 4, fontSize: "0.75em", opacity: 0.85 }}>
+              v{__APP_VERSION__}
+            </span>
+          )}
+        </h1>
 
-          <ToggleButtonGroup
-            value={unit}
-            exclusive
-            onChange={(_, v) => v && setUnit(v)}
-            size="small"
-            sx={{ mx: 1 }}
+        <div style={{ display: "flex", border: "1px solid rgba(255,255,255,0.5)", borderRadius: 4, overflow: "hidden" }}>
+          <button
+            type="button"
+            onClick={() => setUnit("km")}
+            style={{
+              padding: "6px 12px",
+              border: "none",
+              backgroundColor: unit === "km" ? "rgba(255,255,255,0.3)" : "transparent",
+              color: "white",
+              cursor: "pointer",
+              fontSize: 14,
+              fontFamily: zenith.fontFamily,
+            }}
           >
-            <ToggleButton value="km">km</ToggleButton>
-            <ToggleButton value="mi">mi</ToggleButton>
-          </ToggleButtonGroup>
-          <FormControl size="small" sx={{ minWidth: 140, mx: 1 }}>
-            <InputLabel>Window</InputLabel>
-            <Select
-              value={windowPreset}
-              label="Window"
-              onChange={(e) => setWindowPreset(Number(e.target.value))}
-            >
-              {PRESETS.map((p) => (
-                <MenuItem key={p.days} value={p.days}>
-                  {p.label}
-                </MenuItem>
-              ))}
-              <MenuItem value={-1}>Custom</MenuItem>
-            </Select>
-          </FormControl>
+            km
+          </button>
+          <button
+            type="button"
+            onClick={() => setUnit("mi")}
+            style={{
+              padding: "6px 12px",
+              border: "none",
+              backgroundColor: unit === "mi" ? "rgba(255,255,255,0.3)" : "transparent",
+              color: "white",
+              cursor: "pointer",
+              fontSize: 14,
+              fontFamily: zenith.fontFamily,
+            }}
+          >
+            mi
+          </button>
+        </div>
+        <div>
+          <label style={{ display: "block", fontSize: 11, marginBottom: 2, opacity: 0.9 }}>Window</label>
+          <select
+            value={windowPreset}
+            onChange={(e) => setWindowPreset(Number(e.target.value))}
+            style={{
+              padding: "6px 10px",
+              fontSize: 14,
+              borderRadius: 4,
+              border: "1px solid rgba(255,255,255,0.5)",
+              backgroundColor: "rgba(255,255,255,0.2)",
+              color: "white",
+              minWidth: 120,
+            }}
+          >
+            {PRESETS.map((p) => (
+              <option key={p.days} value={p.days} style={{ color: zenith.neutral900 }}>
+                {p.label}
+              </option>
+            ))}
+            <option value={-1} style={{ color: zenith.neutral900 }}>Custom</option>
+          </select>
+        </div>
 
-          {windowPreset === -1 && (
-            <>
-              <TextField
-                size="small"
+        {windowPreset === -1 && (
+          <>
+            <div>
+              <label style={{ display: "block", fontSize: 11, marginBottom: 2, opacity: 0.9 }}>From</label>
+              <input
                 type="date"
-                label="From"
-                InputLabelProps={{ shrink: true }}
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                sx={{ width: 130, mx: 0.5 }}
+                style={{
+                  padding: 6,
+                  fontSize: 14,
+                  borderRadius: 4,
+                  border: "1px solid rgba(255,255,255,0.5)",
+                  backgroundColor: "rgba(255,255,255,0.2)",
+                  color: "white",
+                  width: 130,
+                }}
               />
-              <TextField
-                size="small"
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 11, marginBottom: 2, opacity: 0.9 }}>To</label>
+              <input
                 type="date"
-                label="To"
-                InputLabelProps={{ shrink: true }}
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
-                sx={{ width: 130, mx: 0.5 }}
+                style={{
+                  padding: 6,
+                  fontSize: 14,
+                  borderRadius: 4,
+                  border: "1px solid rgba(255,255,255,0.5)",
+                  backgroundColor: "rgba(255,255,255,0.2)",
+                  color: "white",
+                  width: 130,
+                }}
               />
-            </>
-          )}
+            </div>
+          </>
+        )}
 
-          <IconButton color="inherit" onClick={refresh} disabled={loading}>
-            <RefreshIcon />
-          </IconButton>
-          <Button color="inherit" startIcon={<PrintIcon />} onClick={() => setShowPrint(true)}>
-            Print QBR
-          </Button>
-          <Button color="inherit" onClick={forgetSession}>
-            Forget session
-          </Button>
-          <Button color="inherit" startIcon={<LogoutIcon />} onClick={logout}>
-            Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
+        <Button type="light" onClick={refresh} disabled={loading}>
+          Refresh
+        </Button>
+        <Button type="light" onClick={() => setShowPrint(true)}>
+          Print QBR
+        </Button>
+        <Button type="tertiary" onClick={forgetSession}>
+          Forget session
+        </Button>
+        <Button type="light" onClick={logout}>
+          Logout
+        </Button>
+      </header>
 
       {loading && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          style={{ width: "100%" }}
+          style={{
+            width: "100%",
+            padding: zenith.spacing,
+            display: "flex",
+            alignItems: "center",
+            gap: zenith.spacing,
+            backgroundColor: "white",
+            borderBottom: `1px solid ${zenith.neutral100}`,
+          }}
         >
-          <LinearProgress />
+          <Waiting />
           {progress && (
-            <Typography variant="caption" sx={{ px: 2, py: 0.5 }}>
+            <span style={{ fontSize: 12, color: zenith.neutral500 }}>
               {progress} {progressVal.total > 1 ? `${progressVal.current}/${progressVal.total}` : ""}
-            </Typography>
+            </span>
           )}
         </motion.div>
       )}
 
-      <Box sx={{ px: 2, py: 1, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
-        <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
+      <div
+        style={{
+          padding: zenith.spacing,
+          display: "flex",
+          gap: zenith.spacing,
+          alignItems: "center",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+          backgroundColor: "white",
+        }}
+      >
+        <div style={{ display: "flex", gap: zenith.spacing, alignItems: "center", flexWrap: "wrap" }}>
           {lastRefreshed && (
-            <Typography variant="caption" color="text.secondary">
+            <span style={{ fontSize: 12, color: zenith.neutral500 }}>
               Last refreshed: {new Date(lastRefreshed).toLocaleString()}
-            </Typography>
+            </span>
           )}
           {cachedUntil && (
-            <Typography variant="caption" color="text.secondary">
+            <span style={{ fontSize: 12, color: zenith.neutral500 }}>
               Data cached until: {new Date(cachedUntil).toLocaleString()}
-            </Typography>
+            </span>
           )}
-        </Box>
-        <Typography variant="caption" color="text.secondary">
+        </div>
+        <span style={{ fontSize: 12, color: zenith.neutral500 }}>
           Data range: {dateRange().from.toLocaleDateString()} – {dateRange().to.toLocaleDateString()}
-        </Typography>
-      </Box>
+        </span>
+      </div>
 
       {!data && !loading && (
-        <Box sx={{ p: 4, textAlign: "center" }}>
-          <Typography color="text.secondary">No data loaded. Click Refresh to fetch.</Typography>
-          <Button variant="contained" sx={{ mt: 2 }} onClick={refresh}>
+        <div style={{ padding: 48, textAlign: "center" }}>
+          <p style={{ color: zenith.neutral500, marginBottom: 16 }}>No data loaded. Click Refresh to fetch.</p>
+          <Button type="primary" onClick={refresh}>
             Refresh
           </Button>
-        </Box>
+        </div>
       )}
 
       {data && !showPrint && (
         <>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: "divider", px: 2 }}>
-            <Tab label="Utilization" />
-            <Tab label="Safety" />
-            <Tab label="Optimization" />
-            <Tab label="Maintenance" />
-          </Tabs>
-          <Box sx={{ p: 2 }}>
+          <div
+            style={{
+              borderBottom: `1px solid ${zenith.neutral100}`,
+              paddingLeft: zenith.spacingLg,
+              backgroundColor: "white",
+            }}
+          >
+            <div style={{ display: "flex", gap: 0 }}>
+              {TAB_LABELS.map((label, i) => (
+                <button
+                  key={label}
+                  onClick={() => setTab(i)}
+                  style={{
+                    padding: "12px 20px",
+                    border: "none",
+                    borderBottom: tab === i ? `2px solid ${zenith.primary}` : "2px solid transparent",
+                    backgroundColor: "transparent",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: tab === i ? zenith.primary : zenith.neutral500,
+                    cursor: "pointer",
+                    fontFamily: zenith.fontFamily,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ padding: zenith.spacingLg, backgroundColor: zenith.neutral100 }}>
             <AnimatePresence mode="wait">
               {tab === 0 && (
                 <motion.div
@@ -331,7 +411,7 @@ export function DashboardPage() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </Box>
+          </div>
         </>
       )}
 
@@ -343,14 +423,14 @@ export function DashboardPage() {
         />
       )}
 
-      <Box sx={{ p: 2 }}>
-        <Button size="small" onClick={handleClearCache}>
+      <div style={{ padding: zenith.spacing }}>
+        <Button type="tertiary" onClick={handleClearCache}>
           Clear local cache
         </Button>
-        <Button size="small" onClick={handleClearClientCache}>
+        <Button type="tertiary" onClick={handleClearClientCache}>
           Clear cache for this client
         </Button>
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }

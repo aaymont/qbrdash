@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Box, Grid, Typography, Tooltip } from "@mui/material";
 import {
   BarChart,
   Bar,
@@ -15,6 +14,15 @@ import { DrilldownTable } from "./DrilldownTable";
 import { DetailDrawer } from "./DetailDrawer";
 import { InsightsPanel } from "./InsightsPanel";
 import type { DataPayload } from "@/features/dataService";
+
+const zenith = {
+  neutral100: "var(--zenith-neutral-100, #EDEBE9)",
+  neutral500: "var(--zenith-neutral-500, #605E5C)",
+  neutral900: "var(--zenith-neutral-900, #201F1E)",
+  spacing: "var(--zenith-spacing-md, 16px)",
+  spacingLg: "var(--zenith-spacing-lg, 24px)",
+  fontFamily: "var(--zenith-font-family, 'Segoe UI', sans-serif)",
+};
 
 function formatDuration(sec: number) {
   if (sec < 60) return `${sec}s`;
@@ -69,53 +77,43 @@ export function SafetyTab({ data }: { data: DataPayload }) {
   ];
 
   return (
-    <Box>
-      <Grid container spacing={2}>
-        <Grid item xs={6} md={2}>
-          <KpiTile title="Total events" value={s.totalEvents} index={0} />
-        </Grid>
-        <Grid item xs={6} md={2}>
-          <KpiTile title="Rule types" value={Object.keys(s.byRule).length} index={1} />
-        </Grid>
-        <Grid item xs={6} md={2}>
-          <Tooltip title={s.speedProxyLabel || ""}>
-            <span>
-              <KpiTile
-                title="Speeding (proxy)"
-                value={formatDuration(s.speedProxySeconds)}
-                subtitle={s.speedProxySeconds > 0 ? "From Trip SpeedRanges" : undefined}
-                index={2}
-              />
-            </span>
-          </Tooltip>
-        </Grid>
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: zenith.spacing }}>
+        <KpiTile title="Total events" value={s.totalEvents} index={0} />
+        <KpiTile title="Rule types" value={Object.keys(s.byRule).length} index={1} />
+        <div title={s.speedProxyLabel || ""}>
+          <KpiTile
+            title="Speeding (proxy)"
+            value={formatDuration(s.speedProxySeconds)}
+            subtitle={s.speedProxySeconds > 0 ? "From Trip SpeedRanges" : undefined}
+            index={2}
+          />
+        </div>
         {Object.entries(s.byRule).slice(0, 3).map(([ruleId, v], i) => (
-          <Grid item xs={6} md={2} key={ruleId}>
-            <KpiTile title={v.name} value={v.count} index={3 + i} />
-          </Grid>
+          <KpiTile key={ruleId} title={v.name} value={v.count} index={3 + i} />
         ))}
-      </Grid>
+      </div>
 
-      <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
+      <h3 style={{ marginTop: zenith.spacingLg, marginBottom: zenith.spacing, fontSize: 16, fontWeight: 600, fontFamily: zenith.fontFamily, color: zenith.neutral900 }}>
         Events by rule type
-      </Typography>
-      <Box sx={{ height: 280 }}>
+      </h3>
+      <div style={{ height: 280, backgroundColor: "white", borderRadius: 8, padding: zenith.spacing, border: `1px solid ${zenith.neutral100}` }}>
         <AnimatedChart>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={byRuleChart}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <RechartsTooltip />
-            <Bar dataKey="count" fill="#d32f2f" name="Count" />
-          </BarChart>
-        </ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={byRuleChart}>
+              <CartesianGrid strokeDasharray="3 3" stroke={zenith.neutral100} />
+              <XAxis dataKey="name" tick={{ fill: zenith.neutral500 }} />
+              <YAxis tick={{ fill: zenith.neutral500 }} />
+              <RechartsTooltip />
+              <Bar dataKey="count" fill="#d32f2f" name="Count" />
+            </BarChart>
+          </ResponsiveContainer>
         </AnimatedChart>
-      </Box>
+      </div>
 
-      <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
+      <h3 style={{ marginTop: zenith.spacingLg, marginBottom: zenith.spacing, fontSize: 16, fontWeight: 600, fontFamily: zenith.fontFamily, color: zenith.neutral900 }}>
         Recent events
-      </Typography>
+      </h3>
       <DrilldownTable
         rows={tableRows}
         columns={[
@@ -129,9 +127,9 @@ export function SafetyTab({ data }: { data: DataPayload }) {
         searchFields={["rule", "device"]}
       />
 
-      <Box sx={{ mt: 3 }}>
+      <div style={{ marginTop: zenith.spacingLg }}>
         <InsightsPanel insights={insights} actions={actions} />
-      </Box>
+      </div>
 
       <DetailDrawer
         open={!!drawerDevice}
@@ -139,11 +137,11 @@ export function SafetyTab({ data }: { data: DataPayload }) {
         title={deviceMap.get(drawerDevice ?? "") ?? "Vehicle safety"}
       >
         {drawerDevice && (
-          <Typography variant="body2" color="text.secondary">
+          <p style={{ fontSize: 14, color: zenith.neutral500 }}>
             Events for this vehicle in selected period.
-          </Typography>
+          </p>
         )}
       </DetailDrawer>
-    </Box>
+    </div>
   );
 }

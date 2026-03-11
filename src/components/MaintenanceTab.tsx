@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Box, Grid, Typography, Chip, Table, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import {
   BarChart,
   Bar,
@@ -19,6 +18,16 @@ import { InsightsPanel } from "./InsightsPanel";
 import type { DataPayload } from "@/features/dataService";
 import type { FaultAggregates } from "@/features/maintenance/faultsPipeline";
 import type { FaultDataRecord } from "@/features/maintenance/faultsPipeline";
+
+const zenith = {
+  primary: "var(--zenith-primary, #0078D4)",
+  neutral100: "var(--zenith-neutral-100, #EDEBE9)",
+  neutral500: "var(--zenith-neutral-500, #605E5C)",
+  neutral900: "var(--zenith-neutral-900, #201F1E)",
+  spacing: "var(--zenith-spacing-md, 16px)",
+  spacingLg: "var(--zenith-spacing-lg, 24px)",
+  fontFamily: "var(--zenith-font-family, 'Segoe UI', sans-serif)",
+};
 
 function VehicleFaultDetail({
   deviceData,
@@ -55,48 +64,62 @@ function VehicleFaultDetail({
   };
 
   return (
-    <Box sx={{ "& > * + *": { mt: 2 } }}>
-      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-        <Chip label={`Total: ${deviceData.count}`} color="primary" variant="outlined" size="small" />
-        <Chip label={`Recent (7d): ${deviceData.recentCount}`} color="secondary" variant="outlined" size="small" />
-      </Box>
+    <div style={{ display: "flex", flexDirection: "column", gap: zenith.spacing }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <span
+          style={{
+            padding: "4px 10px",
+            fontSize: 12,
+            borderRadius: 8,
+            border: `1px solid ${zenith.primary}`,
+            color: zenith.primary,
+          }}
+        >
+          Total: {deviceData.count}
+        </span>
+        <span
+          style={{
+            padding: "4px 10px",
+            fontSize: 12,
+            borderRadius: 8,
+            border: `1px solid #9c27b0`,
+            color: "#9c27b0",
+          }}
+        >
+          Recent (7d): {deviceData.recentCount}
+        </span>
+      </div>
 
       {deviceData.topFaults.length > 0 && (
-        <Box>
-          <Typography variant="subtitle2" gutterBottom>
-            Top faults
-          </Typography>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: zenith.neutral900 }}>Top faults</div>
           {deviceData.topFaults.map((t, i) => (
-            <Typography key={i} variant="body2" display="block" sx={{ py: 0.25 }}>
+            <div key={i} style={{ fontSize: 13, padding: "2px 0", color: zenith.neutral900 }}>
               {t.description}: {t.count}
-            </Typography>
+            </div>
           ))}
-        </Box>
+        </div>
       )}
 
       {Object.keys(deviceData.bySeverity).length > 0 && (
-        <Box>
-          <Typography variant="subtitle2" gutterBottom>
-            By severity
-          </Typography>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: zenith.neutral900 }}>By severity</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {Object.entries(deviceData.bySeverity)
               .sort(([a], [b]) => Number(b) - Number(a))
               .map(([sev, cnt]) => (
-                <Typography key={sev} variant="body2">
+                <div key={sev} style={{ fontSize: 13, color: zenith.neutral900 }}>
                   {severityLabels[Number(sev)] ?? `Level ${sev}`}: {cnt}
-                </Typography>
+                </div>
               ))}
-          </Box>
-        </Box>
+          </div>
+        </div>
       )}
 
       {trendData.length > 0 && (
-        <Box>
-          <Typography variant="subtitle2" gutterBottom>
-            Fault trend
-          </Typography>
-          <Box sx={{ height: 120 }}>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: zenith.neutral900 }}>Fault trend</div>
+          <div style={{ height: 120 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData}>
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} />
@@ -105,48 +128,44 @@ function VehicleFaultDetail({
                 <Area type="monotone" dataKey="count" stroke="#9c27b0" fill="#9c27b0" fillOpacity={0.4} />
               </AreaChart>
             </ResponsiveContainer>
-          </Box>
-        </Box>
+          </div>
+        </div>
       )}
 
       {recentFaultsList.length > 0 && (
-        <Box>
-          <Typography variant="subtitle2" gutterBottom>
-            Recent fault records
-          </Typography>
-          <Table size="small" padding="none">
-            <TableHead>
-              <TableRow>
-                <TableCell>Date</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell align="right">Count</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: zenith.neutral900 }}>Recent fault records</div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", padding: 8, borderBottom: `1px solid ${zenith.neutral100}` }}>Date</th>
+                <th style={{ textAlign: "left", padding: 8, borderBottom: `1px solid ${zenith.neutral100}` }}>Description</th>
+                <th style={{ textAlign: "right", padding: 8, borderBottom: `1px solid ${zenith.neutral100}` }}>Count</th>
+              </tr>
+            </thead>
+            <tbody>
               {recentFaultsList.map((r, i) => (
-                <TableRow key={r.id ?? i}>
-                  <TableCell sx={{ fontSize: "0.75rem" }}>
+                <tr key={r.id ?? i}>
+                  <td style={{ padding: 8, borderBottom: `1px solid ${zenith.neutral100}` }}>
                     {r.dateTime ? new Date(r.dateTime).toLocaleDateString() : "—"}
-                  </TableCell>
-                  <TableCell sx={{ fontSize: "0.75rem" }}>
+                  </td>
+                  <td style={{ padding: 8, borderBottom: `1px solid ${zenith.neutral100}` }}>
                     {r.faultDescription ?? "Unknown"}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontSize: "0.75rem" }}>
+                  </td>
+                  <td style={{ padding: 8, borderBottom: `1px solid ${zenith.neutral100}`, textAlign: "right" }}>
                     {r.count ?? 1}
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
-        </Box>
+            </tbody>
+          </table>
+        </div>
       )}
 
       {deviceData.topFaults.length === 0 && rawFaults.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
-          No fault details available for this vehicle.
-        </Typography>
+        <p style={{ fontSize: 14, color: zenith.neutral500 }}>No fault details available for this vehicle.</p>
       )}
-    </Box>
+    </div>
   );
 }
 
@@ -196,40 +215,34 @@ export function MaintenanceTab({ data }: { data: DataPayload }) {
   ];
 
   return (
-    <Box>
-      <Grid container spacing={2}>
-        <Grid item xs={6} md={2}>
-          <KpiTile title="Total faults" value={f.totalFaults} index={0} />
-        </Grid>
-        <Grid item xs={6} md={2}>
-          <KpiTile title="Recent (7d)" value={f.recentFaults.length} subtitle="Last 7 days" index={1} />
-        </Grid>
-        <Grid item xs={6} md={2}>
-          <KpiTile title="Vehicles affected" value={Object.keys(f.byDevice).length} index={2} />
-        </Grid>
-      </Grid>
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: zenith.spacing }}>
+        <KpiTile title="Total faults" value={f.totalFaults} index={0} />
+        <KpiTile title="Recent (7d)" value={f.recentFaults.length} subtitle="Last 7 days" index={1} />
+        <KpiTile title="Vehicles affected" value={Object.keys(f.byDevice).length} index={2} />
+      </div>
 
-      <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
+      <h3 style={{ marginTop: zenith.spacingLg, marginBottom: zenith.spacing, fontSize: 16, fontWeight: 600, fontFamily: zenith.fontFamily, color: zenith.neutral900 }}>
         Faults by vehicle
-      </Typography>
-      <Box sx={{ height: 280 }}>
+      </h3>
+      <div style={{ height: 280, backgroundColor: "white", borderRadius: 8, padding: zenith.spacing, border: `1px solid ${zenith.neutral100}` }}>
         <AnimatedChart>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="total" fill="#9c27b0" name="Total (period)" />
-            <Bar dataKey="recent" fill="#ed6c02" name="Recent (7d)" />
-          </BarChart>
-        </ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={zenith.neutral100} />
+              <XAxis dataKey="name" tick={{ fill: zenith.neutral500 }} />
+              <YAxis tick={{ fill: zenith.neutral500 }} />
+              <Tooltip />
+              <Bar dataKey="total" fill="#9c27b0" name="Total (period)" />
+              <Bar dataKey="recent" fill="#ed6c02" name="Recent (7d)" />
+            </BarChart>
+          </ResponsiveContainer>
         </AnimatedChart>
-      </Box>
+      </div>
 
-      <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
+      <h3 style={{ marginTop: zenith.spacingLg, marginBottom: zenith.spacing, fontSize: 16, fontWeight: 600, fontFamily: zenith.fontFamily, color: zenith.neutral900 }}>
         Fault summary by vehicle
-      </Typography>
+      </h3>
       <DrilldownTable
         rows={tableRows}
         columns={[
@@ -243,9 +256,9 @@ export function MaintenanceTab({ data }: { data: DataPayload }) {
         searchFields={["device"]}
       />
 
-      <Box sx={{ mt: 3 }}>
+      <div style={{ marginTop: zenith.spacingLg }}>
         <InsightsPanel insights={insights} actions={actions} />
-      </Box>
+      </div>
 
       <DetailDrawer
         open={!!drawerDevice}
@@ -259,6 +272,6 @@ export function MaintenanceTab({ data }: { data: DataPayload }) {
           />
         )}
       </DetailDrawer>
-    </Box>
+    </div>
   );
 }

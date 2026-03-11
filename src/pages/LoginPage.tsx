@@ -1,22 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  TextField,
-  Typography,
-  Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from "@mui/material";
+import { Button, TextInput, Banner } from "@geotab/zenith";
 import { useAuth } from "@/context/AuthContext";
 import { AnimatedCard, AnimatedStaggerContainer, AnimatedStaggerItem } from "@/components/Animated";
 import { listClients, addClient, type ClientEntry } from "@/lib/clientRegistry";
 import { getCachedCredentials, setCachedCredentials } from "@/lib/credentialCache";
+
+const zenithSpacing = {
+  padding: "var(--zenith-spacing-lg, 24px)",
+  gap: "var(--zenith-spacing-md, 16px)",
+};
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -87,129 +80,178 @@ export function LoginPage() {
   };
 
   return (
-    <Box
-      sx={{
+    <div
+      style={{
         minHeight: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        bgcolor: "grey.100",
-        p: 2,
+        backgroundColor: "var(--zenith-neutral-100, #EDEBE9)",
+        padding: zenithSpacing.padding,
       }}
     >
       <AnimatedCard>
-        <Card sx={{ maxWidth: 420 }}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="h5" gutterBottom>
+        <div
+          style={{
+            maxWidth: 420,
+            padding: zenithSpacing.padding,
+            backgroundColor: "white",
+            borderRadius: 8,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            border: "1px solid var(--zenith-neutral-100, #EDEBE9)",
+          }}
+        >
+          <h1
+            style={{
+              fontSize: "var(--zenith-font-size-lg, 16px)",
+              fontWeight: "var(--zenith-font-weight-bold, 700)",
+              margin: "0 0 8px 0",
+              color: "var(--zenith-neutral-900, #201F1E)",
+            }}
+          >
             Geotab QBR Insights
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {typeof __APP_VERSION__ !== "undefined" && (
+              <span style={{ marginLeft: 6, fontSize: "0.75em", opacity: 0.85 }}>
+                v{__APP_VERSION__}
+              </span>
+            )}
+          </h1>
+          <p
+            style={{
+              fontSize: "var(--zenith-font-size-md, 14px)",
+              color: "var(--zenith-neutral-500, #605E5C)",
+              margin: "0 0 24px 0",
+            }}
+          >
             Sign in to your MyGeotab database
-          </Typography>
+          </p>
 
           {error && (
             <AnimatedStaggerItem>
-              <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
-                {error}
-              </Alert>
+              <div style={{ marginBottom: 16 }}>
+                <Banner type="error" onClose={clearError}>
+                  {error}
+                </Banner>
+              </div>
             </AnimatedStaggerItem>
           )}
 
           <form onSubmit={handleSubmit}>
             <AnimatedStaggerContainer>
-            {savedClients.length > 0 && (
+              {savedClients.length > 0 && (
+                <AnimatedStaggerItem>
+                  <div style={{ marginBottom: 16 }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "var(--zenith-font-size-sm, 12px)",
+                        fontWeight: "var(--zenith-font-weight-semibold, 600)",
+                        marginBottom: 4,
+                        color: "var(--zenith-neutral-700, #3B3A39)",
+                      }}
+                    >
+                      Saved client
+                    </label>
+                    <select
+                      value={selectedClient}
+                      onChange={(e) => handleSelectClient(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        fontSize: 14,
+                        borderRadius: 4,
+                        border: "1px solid var(--zenith-neutral-100, #EDEBE9)",
+                        backgroundColor: "white",
+                      }}
+                    >
+                      <option value="">Add new...</option>
+                      {savedClients.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.friendlyName} ({c.database})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </AnimatedStaggerItem>
+              )}
+
               <AnimatedStaggerItem>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Saved client</InputLabel>
-                <Select
-                  value={selectedClient}
-                  label="Saved client"
-                  onChange={(e) => handleSelectClient(e.target.value)}
+                <div style={{ marginBottom: 16 }}>
+                  <TextInput
+                    label="Server"
+                    value={server}
+                    onChange={(e) => setServer(e.target.value)}
+                    placeholder="my.geotab.com"
+                  />
+                </div>
+              </AnimatedStaggerItem>
+              <AnimatedStaggerItem>
+                <div style={{ marginBottom: 16 }}>
+                  <TextInput
+                    label="Database"
+                    value={database}
+                    onChange={(e) => setDatabase(e.target.value)}
+                    required
+                  />
+                </div>
+              </AnimatedStaggerItem>
+              <AnimatedStaggerItem>
+                <div style={{ marginBottom: 16 }}>
+                  <TextInput
+                    label="Username"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <TextInput
+                    label="Password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </AnimatedStaggerItem>
+              {!selectedClient && (
+                <AnimatedStaggerItem>
+                  <div style={{ marginBottom: 16 }}>
+                    <TextInput
+                      label="Friendly name (optional)"
+                      value={friendlyName}
+                      onChange={(e) => setFriendlyName(e.target.value)}
+                      placeholder="Save as..."
+                    />
+                  </div>
+                </AnimatedStaggerItem>
+              )}
+
+              <AnimatedStaggerItem>
+                <div style={{ marginTop: 16 }} className="zen-button-full-width">
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  disabled={loading || !database || !userName || !password}
                 >
-                  <MenuItem value="">Add new...</MenuItem>
-                  {savedClients.map((c) => (
-                    <MenuItem key={c.id} value={c.id}>
-                      {c.friendlyName} ({c.database})
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                  {loading ? "Signing in..." : "Sign In"}
+                </Button>
+                </div>
               </AnimatedStaggerItem>
-            )}
-
-            <AnimatedStaggerItem>
-            <TextField
-              fullWidth
-              label="Server"
-              value={server}
-              onChange={(e) => setServer(e.target.value)}
-              margin="normal"
-              placeholder="my.geotab.com"
-            />
-            </AnimatedStaggerItem>
-            <AnimatedStaggerItem>
-            <TextField
-              fullWidth
-              label="Database"
-              value={database}
-              onChange={(e) => setDatabase(e.target.value)}
-              margin="normal"
-              required
-            />
-            </AnimatedStaggerItem>
-            <AnimatedStaggerItem>
-            <TextField
-              fullWidth
-              label="Username"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              margin="normal"
-              required
-            />
-            </AnimatedStaggerItem>
-            {!selectedClient && (
-              <AnimatedStaggerItem>
-                <TextField
-                  fullWidth
-                  label="Friendly name (optional)"
-                  value={friendlyName}
-                  onChange={(e) => setFriendlyName(e.target.value)}
-                  margin="normal"
-                  placeholder="Save as..."
-                />
-              </AnimatedStaggerItem>
-            )}
-
-            <AnimatedStaggerItem>
-            <Button
-              type="submit"
-              variant="contained"
-              fullWidth
-              size="large"
-              disabled={loading || !database || !userName || !password}
-              sx={{ mt: 2 }}
-            >
-              {loading ? "Signing in..." : "Sign In"}
-            </Button>
-            </AnimatedStaggerItem>
             </AnimatedStaggerContainer>
           </form>
 
-          <Typography variant="caption" display="block" sx={{ mt: 2 }} color="text.secondary">
+          <p
+            style={{
+              fontSize: "var(--zenith-font-size-sm, 12px)",
+              color: "var(--zenith-neutral-500, #605E5C)",
+              margin: "24px 0 0 0",
+            }}
+          >
             Username and password are cached per client for convenience. Session is kept in this tab only.
-          </Typography>
-        </CardContent>
-      </Card>
+          </p>
+        </div>
       </AnimatedCard>
-    </Box>
+    </div>
   );
 }

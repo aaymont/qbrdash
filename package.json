@@ -1,7 +1,7 @@
 {
   "name": "geotab-qbr-insights-dashboard",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.0.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,10 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@emotion/react": "^11.13.3",
-    "@emotion/styled": "^11.13.0",
-    "@mui/icons-material": "^6.1.6",
-    "@mui/material": "^6.1.6",
+    "@geotab/zenith": "^3.6.3",
     "dexie": "^4.0.8",
     "framer-motion": "^12.35.2",
     "mg-api-js": "^3.0.0",

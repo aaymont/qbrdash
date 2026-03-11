@@ -1,19 +1,14 @@
-import {
-  Paper,
-  Typography,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-} from "@mui/material";
-import LightbulbIcon from "@mui/icons-material/Lightbulb";
-import AssignmentIcon from "@mui/icons-material/Assignment";
+import { IconLightBulb, IconClipboard } from "@geotab/zenith";
+
+const zenith = {
+  primary: "var(--zenith-primary, #0078D4)",
+  neutral100: "var(--zenith-neutral-100, #EDEBE9)",
+  neutral500: "var(--zenith-neutral-500, #605E5C)",
+  neutral700: "var(--zenith-neutral-700, #3B3A39)",
+  neutral900: "var(--zenith-neutral-900, #201F1E)",
+  spacing: "var(--zenith-spacing-md, 16px)",
+  fontFamily: "var(--zenith-font-family, 'Segoe UI', sans-serif)",
+};
 
 interface Insight {
   text: string;
@@ -35,66 +30,126 @@ interface InsightsPanelProps {
 
 export function InsightsPanel({ insights, actions }: InsightsPanelProps) {
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
-      <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+    <div
+      style={{
+        padding: zenith.spacing,
+        border: `1px solid ${zenith.neutral100}`,
+        borderRadius: 8,
+        backgroundColor: "white",
+      }}
+    >
+      <h3
+        style={{
+          fontSize: 16,
+          fontWeight: 600,
+          margin: "0 0 16px 0",
+          fontFamily: zenith.fontFamily,
+          color: zenith.neutral900,
+        }}
+      >
         Insights and Actions
-      </Typography>
+      </h3>
 
-      <Typography variant="overline" color="primary" sx={{ display: "block", mt: 2 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: zenith.primary, marginTop: 16, textTransform: "uppercase" }}>
         Data-backed insights
-      </Typography>
-      <List dense disablePadding>
+      </div>
+      <ul style={{ listStyle: "none", padding: 0, margin: "8px 0 0 0" }}>
         {insights.slice(0, 5).map((i, idx) => (
-          <ListItem key={idx} disablePadding sx={{ py: 0.25 }}>
-            <ListItemIcon sx={{ minWidth: 32 }}>
-              <LightbulbIcon fontSize="small" color="action" />
-            </ListItemIcon>
-            <ListItemText primary={i.text} secondary={i.metric} />
-          </ListItem>
+          <li
+            key={idx}
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 8,
+              padding: "4px 0",
+              fontSize: 14,
+              color: zenith.neutral900,
+            }}
+          >
+            <span style={{ flexShrink: 0, marginTop: 2 }}>
+              <IconLightBulb />
+            </span>
+            <span>
+              {i.text}
+              {i.metric && (
+                <span style={{ display: "block", fontSize: 12, color: zenith.neutral500 }}>{i.metric}</span>
+              )}
+            </span>
+          </li>
         ))}
-      </List>
+      </ul>
 
-      <Typography variant="overline" color="primary" sx={{ display: "block", mt: 2 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: zenith.primary, marginTop: 16, textTransform: "uppercase" }}>
         Recommended actions
-      </Typography>
-      <List dense disablePadding>
+      </div>
+      <ul style={{ listStyle: "none", padding: 0, margin: "8px 0 0 0" }}>
         {actions.slice(0, 5).map((a, idx) => (
-          <ListItem key={idx} disablePadding sx={{ py: 0.25 }}>
-            <ListItemIcon sx={{ minWidth: 32 }}>
-              <AssignmentIcon fontSize="small" color="action" />
-            </ListItemIcon>
-            <ListItemText primary={a.action} />
-          </ListItem>
+          <li
+            key={idx}
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 8,
+              padding: "4px 0",
+              fontSize: 14,
+              color: zenith.neutral900,
+            }}
+          >
+            <span style={{ flexShrink: 0, marginTop: 2 }}>
+              <IconClipboard />
+            </span>
+            <span>{a.action}</span>
+          </li>
         ))}
-      </List>
+      </ul>
 
-      <Typography variant="overline" color="primary" sx={{ display: "block", mt: 2 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: zenith.primary, marginTop: 16, textTransform: "uppercase" }}>
         Action plan
-      </Typography>
-      <TableContainer>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Action</TableCell>
-              <TableCell>KPI impacted</TableCell>
-              <TableCell>Target</TableCell>
-              <TableCell>Owner</TableCell>
-              <TableCell>Due</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+      </div>
+      <div style={{ marginTop: 8, overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: `1px solid ${zenith.neutral100}`, color: zenith.neutral700 }}>
+                Action
+              </th>
+              <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: `1px solid ${zenith.neutral100}`, color: zenith.neutral700 }}>
+                KPI impacted
+              </th>
+              <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: `1px solid ${zenith.neutral100}`, color: zenith.neutral700 }}>
+                Target
+              </th>
+              <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: `1px solid ${zenith.neutral100}`, color: zenith.neutral700 }}>
+                Owner
+              </th>
+              <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: `1px solid ${zenith.neutral100}`, color: zenith.neutral700 }}>
+                Due
+              </th>
+            </tr>
+          </thead>
+          <tbody>
             {actions.slice(0, 5).map((a, idx) => (
-              <TableRow key={idx}>
-                <TableCell>{a.action}</TableCell>
-                <TableCell>{a.kpi}</TableCell>
-                <TableCell>{a.target}</TableCell>
-                <TableCell>{a.owner}</TableCell>
-                <TableCell>{a.dueDate}</TableCell>
-              </TableRow>
+              <tr key={idx}>
+                <td style={{ padding: "8px 12px", borderBottom: `1px solid ${zenith.neutral100}`, color: zenith.neutral900 }}>
+                  {a.action}
+                </td>
+                <td style={{ padding: "8px 12px", borderBottom: `1px solid ${zenith.neutral100}`, color: zenith.neutral900 }}>
+                  {a.kpi}
+                </td>
+                <td style={{ padding: "8px 12px", borderBottom: `1px solid ${zenith.neutral100}`, color: zenith.neutral900 }}>
+                  {a.target}
+                </td>
+                <td style={{ padding: "8px 12px", borderBottom: `1px solid ${zenith.neutral100}`, color: zenith.neutral900 }}>
+                  {a.owner}
+                </td>
+                <td style={{ padding: "8px 12px", borderBottom: `1px solid ${zenith.neutral100}`, color: zenith.neutral900 }}>
+                  {a.dueDate}
+                </td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Paper>
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

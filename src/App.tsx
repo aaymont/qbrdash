@@ -1,10 +1,11 @@
+import "@geotab/zenith/dist/index.css";
+import "@/zenith-overrides.css";
 import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { ThemeProvider, CssBaseline } from "@mui/material";
+import { FeedbackProvider } from "@geotab/zenith";
 import { AnimatePresence } from "framer-motion";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { DistanceUnitProvider } from "@/context/DistanceUnitContext";
 import { AnimatedPage } from "@/components/Animated";
-import { theme } from "@/theme";
 import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 
@@ -47,8 +48,7 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <FeedbackProvider>
       <AuthProvider>
         <DistanceUnitProvider>
           <HashRouter>
@@ -56,6 +56,6 @@ export default function App() {
           </HashRouter>
         </DistanceUnitProvider>
       </AuthProvider>
-    </ThemeProvider>
+    </FeedbackProvider>
   );
 }

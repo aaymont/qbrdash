@@ -1,5 +1,3 @@
-import { Box, Grid, Typography } from "@mui/material";
-import { useDistanceUnit } from "@/context/DistanceUnitContext";
 import {
   BarChart,
   Bar,
@@ -9,10 +7,21 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useDistanceUnit } from "@/context/DistanceUnitContext";
 import { KpiTile } from "./KpiTile";
 import { AnimatedChart } from "./Animated";
 import { InsightsPanel } from "./InsightsPanel";
 import type { DataPayload } from "@/features/dataService";
+
+const zenith = {
+  neutral100: "var(--zenith-neutral-100, #EDEBE9)",
+  neutral500: "var(--zenith-neutral-500, #605E5C)",
+  neutral900: "var(--zenith-neutral-900, #201F1E)",
+  spacing: "var(--zenith-spacing-md, 16px)",
+  spacingLg: "var(--zenith-spacing-lg, 24px)",
+  fontFamily: "var(--zenith-font-family, 'Segoe UI', sans-serif)",
+  primary: "var(--zenith-primary, #0078D4)",
+};
 
 function formatHours(sec: number) {
   return `${(sec / 3600).toFixed(1)} h`;
@@ -55,43 +64,35 @@ export function OptimizationTab({ data }: { data: DataPayload }) {
   ];
 
   return (
-    <Box>
-      <Grid container spacing={2}>
-        <Grid item xs={6} md={2}>
-          <KpiTile title="Idle %" value={`${idlePct.toFixed(1)}%`} index={0} />
-        </Grid>
-        <Grid item xs={6} md={2}>
-          <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={1} />
-        </Grid>
-        <Grid item xs={6} md={2}>
-          <KpiTile title="Speed range 1 (s)" value={u.speedRange1DurationSeconds} index={2} />
-        </Grid>
-        <Grid item xs={6} md={2}>
-          <KpiTile title="Speed range 2+3 (s)" value={u.speedRange2DurationSeconds + u.speedRange3DurationSeconds} index={3} />
-        </Grid>
-      </Grid>
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: zenith.spacing }}>
+        <KpiTile title="Idle %" value={`${idlePct.toFixed(1)}%`} index={0} />
+        <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={1} />
+        <KpiTile title="Speed range 1 (s)" value={u.speedRange1DurationSeconds} index={2} />
+        <KpiTile title="Speed range 2+3 (s)" value={u.speedRange2DurationSeconds + u.speedRange3DurationSeconds} index={3} />
+      </div>
 
-      <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
+      <h3 style={{ marginTop: zenith.spacingLg, marginBottom: zenith.spacing, fontSize: 16, fontWeight: 600, fontFamily: zenith.fontFamily, color: zenith.neutral900 }}>
         Top idlers (hours)
-      </Typography>
-      <Box sx={{ height: 280 }}>
+      </h3>
+      <div style={{ height: 280, backgroundColor: "white", borderRadius: 8, padding: zenith.spacing, border: `1px solid ${zenith.neutral100}` }}>
         <AnimatedChart>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={topIdle} layout="vertical" margin={{ left: 80 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" unit=" h" />
-            <YAxis type="category" dataKey="name" width={70} />
-            <Tooltip />
-            <Bar dataKey="idleHours" fill="#ed6c02" name="Idle (h)" />
-            <Bar dataKey="drivingHours" fill="#1976d2" name="Driving (h)" />
-          </BarChart>
-        </ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={topIdle} layout="vertical" margin={{ left: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={zenith.neutral100} />
+              <XAxis type="number" unit=" h" tick={{ fill: zenith.neutral500 }} />
+              <YAxis type="category" dataKey="name" width={70} tick={{ fill: zenith.neutral500 }} />
+              <Tooltip />
+              <Bar dataKey="idleHours" fill="#ed6c02" name="Idle (h)" />
+              <Bar dataKey="drivingHours" fill={zenith.primary} name="Driving (h)" />
+            </BarChart>
+          </ResponsiveContainer>
         </AnimatedChart>
-      </Box>
+      </div>
 
-      <Box sx={{ mt: 3 }}>
+      <div style={{ marginTop: zenith.spacingLg }}>
         <InsightsPanel insights={insights} actions={actions} />
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
