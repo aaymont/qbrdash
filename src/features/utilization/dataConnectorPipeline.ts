@@ -52,14 +52,20 @@ interface ODataResponse {
 
 const SEGMENT_DAYS = 7;
 
+/** End of previous day (exclude current day data). */
+function getEndOfYesterday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+}
+
 /** Get from/to dates for the window. */
 function getDateRange(window: DateWindow): { from: Date; to: Date } {
   if (window.type === "custom" && window.from && window.to) {
     return { from: window.from, to: window.to };
   }
   const days = window.days ?? 7;
-  const to = new Date();
-  const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
+  const to = getEndOfYesterday();
+  const from = new Date(to.getFullYear(), to.getMonth(), to.getDate() - days + 1, 0, 0, 0, 0);
   return { from, to };
 }
 
@@ -159,6 +165,7 @@ function emptyAggregates(): UtilizationAggregates {
     speedRange3DurationSeconds: 0,
     byDevice: {},
     rawTrips: [],
+    rawDailyRows: [],
   };
 }
 
@@ -203,6 +210,17 @@ function mergeRowIntoAgg(agg: UtilizationAggregates, row: VehicleKpiRow): void {
   agg.byDevice[deviceId].tripCount += trips;
 }
 
+/** Aggregate utilization from VehicleKpi_Daily rows. Used when slicing Data Connector cache. */
+export function aggregateFromDailyRows(
+  rows: Array<Record<string, unknown>>
+): UtilizationAggregates {
+  const agg = emptyAggregates();
+  for (const row of rows) {
+    mergeRowIntoAgg(agg, row as VehicleKpiRow);
+  }
+  return agg;
+}
+
 export async function fetchUtilizationFromDataConnector(
   creds: DataConnectorCredentials,
   window: DateWindow,
@@ -228,6 +246,7 @@ export async function fetchUtilizationFromDataConnector(
 
       for (const row of rows) {
         mergeRowIntoAgg(agg, row);
+        agg.rawDailyRows!.push(row as Record<string, unknown>);
       }
 
       nextLink = data["@odata.nextLink"] ?? undefined;

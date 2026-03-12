@@ -128,6 +128,8 @@ export interface UtilizationAggregates {
     }
   >;
   rawTrips: TripRecord[];
+  /** Daily KPI rows from Data Connector (Local_Date, DeviceId, etc.). Used for slicing when rawTrips is empty. */
+  rawDailyRows?: Array<Record<string, unknown>>;
 }
 
 function parseEngineHours(v: unknown): number {
@@ -262,6 +264,7 @@ export function aggregateTrips(trips: TripRecord[]): UtilizationAggregates {
     speedRange3DurationSeconds,
     byDevice,
     rawTrips: trips,
+    rawDailyRows: undefined,
   };
 }
 

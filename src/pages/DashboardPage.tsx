@@ -64,9 +64,11 @@ export function DashboardPage() {
   const dateRange = useCallback(() => {
     const w = getWindow();
     if (w.type === "custom" && w.from && w.to) return { from: w.from, to: w.to };
-    const to = new Date();
     const days = w.days ?? 7;
-    const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
+    const to = new Date();
+    to.setDate(to.getDate() - 1);
+    to.setHours(23, 59, 59, 999);
+    const from = new Date(to.getFullYear(), to.getMonth(), to.getDate() - days + 1, 0, 0, 0, 0);
     return { from, to };
   }, [getWindow]);
 
@@ -131,6 +133,10 @@ export function DashboardPage() {
         setData(payload);
         setLastRefreshed(payload.cachedAt);
         setCachedUntil(payload.expiresAt);
+      } else {
+        setData(null);
+        setLastRefreshed(null);
+        setCachedUntil(null);
       }
     });
   }, [server, database, getWindow]);

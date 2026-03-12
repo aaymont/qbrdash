@@ -4,20 +4,23 @@
 
 import type { GeotabApiWrapper } from "@/lib/geotab";
 import { getCached, getCachedEntry, setCached, clearCache, clearCacheForClient, type CacheKey } from "@/lib/cache/cacheHelpers";
-import { fetchTrips, aggregateTrips, type UtilizationAggregates } from "@/features/utilization/tripsPipeline";
+import { fetchTrips, aggregateTrips, type UtilizationAggregates, type TripRecord } from "@/features/utilization/tripsPipeline";
 import {
   fetchExceptionEvents,
   aggregateSafety,
   type SafetyAggregates,
+  type ExceptionEventRecord,
 } from "@/features/safety/safetyPipeline";
 import {
   fetchFaultData,
   fetchRecentFaults,
   aggregateFaults,
   type FaultAggregates,
+  type FaultDataRecord,
 } from "@/features/maintenance/faultsPipeline";
 import {
   fetchUtilizationFromDataConnector,
+  aggregateFromDailyRows,
   type DataConnectorCredentials,
 } from "@/features/utilization/dataConnectorPipeline";
 export interface DateWindow {
@@ -34,6 +37,8 @@ export interface DataPayload {
   devices: Array<{ id: string; name: string }>;
   /** Max calendar days in the selected window (7, 14, 30, 90, or custom span). Used to cap days used. */
   maxDaysInWindow?: number;
+  /** Timestamp of the end of the fetched date range (e.g. end of yesterday). Used for slicing. */
+  dataToMs?: number;
   cachedAt: number;
   expiresAt: number;
 }
@@ -53,13 +58,103 @@ function toCacheKey(window: DateWindow, server: string, database: string): Cache
   return { server, database, windowDays: 7 };
 }
 
+/** Longer preset days, in ascending order, for cache fallback. */
+const LONGER_PRESETS = [14, 30, 90];
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Slices a cached payload to a shorter preset window.
+ * Works with rawTrips (Trip API) or rawDailyRows (Data Connector).
+ * Returns null if no raw data or requested days >= cached days.
+ */
+function slicePayloadToShorterWindow(
+  payload: DataPayload,
+  requestedDays: number
+): DataPayload | null {
+  const cachedDays = payload.maxDaysInWindow ?? 0;
+  if (requestedDays >= cachedDays) return null;
+
+  const cacheEndMs = payload.dataToMs ?? payload.cachedAt;
+
+  const rawTrips = payload.utilization?.rawTrips ?? [];
+  const rawDailyRows = payload.utilization?.rawDailyRows ?? [];
+  const hasUtilizationData = rawTrips.length > 0 || rawDailyRows.length > 0;
+  if (!hasUtilizationData) return null;
+
+  let utilization: UtilizationAggregates;
+  let speedProxy: number;
+
+  const sliceStartMs = cacheEndMs - requestedDays * MS_PER_DAY;
+  const sliceEndMs = cacheEndMs;
+  const inRange = (ms: number) => ms >= sliceStartMs && ms <= sliceEndMs;
+
+  if (rawTrips.length > 0) {
+    const filteredTrips = rawTrips.filter((t) => {
+      const ms = t.start ? new Date(t.start).getTime() : 0;
+      return inRange(ms);
+    }) as TripRecord[];
+    utilization = aggregateTrips(filteredTrips);
+  } else {
+    const filteredRows = rawDailyRows.filter((row) => {
+      const dateStr = row.Local_Date as string | undefined;
+      if (!dateStr) return false;
+      const dayStart = new Date(dateStr + "T00:00:00Z").getTime();
+      const dayEnd = dayStart + MS_PER_DAY - 1;
+      return dayEnd >= sliceStartMs && dayStart <= sliceEndMs;
+    });
+    utilization = aggregateFromDailyRows(filteredRows);
+  }
+
+  speedProxy =
+    utilization.speedRange1DurationSeconds +
+    utilization.speedRange2DurationSeconds +
+    utilization.speedRange3DurationSeconds;
+
+  const rawExceptions = (payload.safety?.rawExceptions ?? []) as ExceptionEventRecord[];
+  const filteredExceptions = rawExceptions.filter((ex) => {
+    const ms = ex.activeFrom ? new Date(ex.activeFrom).getTime() : 0;
+    return inRange(ms);
+  });
+
+  const rulesFromNames = Object.entries(payload.safety.ruleNames ?? {}).map(([id, name]) => ({
+    id,
+    name,
+  }));
+  const safety = aggregateSafety(filteredExceptions, rulesFromNames, speedProxy);
+
+  const rawFaults = (payload.faults?.rawFaults ?? []) as FaultDataRecord[];
+  const filteredFaults = rawFaults.filter((f) => {
+    const ms = f.dateTime ? new Date(f.dateTime).getTime() : 0;
+    return inRange(ms);
+  });
+  const faults = aggregateFaults(filteredFaults, filteredFaults);
+
+  return {
+    utilization,
+    safety,
+    faults,
+    devices: payload.devices,
+    maxDaysInWindow: requestedDays,
+    dataToMs: payload.dataToMs,
+    cachedAt: payload.cachedAt,
+    expiresAt: payload.expiresAt,
+  };
+}
+
+/** Returns end of previous day (23:59:59.999) so we exclude current day data. */
+function getEndOfYesterday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+}
+
 function getDateRange(window: DateWindow): { from: Date; to: Date } {
-  const to = new Date();
   if (window.type === "custom" && window.from && window.to) {
     return { from: window.from, to: window.to };
   }
   const days = window.days ?? 7;
-  const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
+  const to = getEndOfYesterday();
+  const from = new Date(to.getFullYear(), to.getMonth(), to.getDate() - days + 1, 0, 0, 0, 0);
   return { from, to };
 }
 
@@ -186,6 +281,7 @@ export async function loadData(
     faults,
     devices: deviceList.length > 0 ? deviceList : Array.from(deviceMap.entries()).map(([id, name]) => ({ id, name })),
     maxDaysInWindow,
+    dataToMs: to.getTime(),
     cachedAt: now,
     expiresAt: now + ttlMs,
   };
@@ -202,7 +298,22 @@ export async function getCachedDataForDisplay(
 ): Promise<DataPayload | null> {
   const cacheKey = toCacheKey(window, server, database);
   const entry = await getCachedEntry<DataPayload>(cacheKey, "qbr_data");
-  return entry?.data ?? null;
+  if (entry?.data) return entry.data;
+
+  if (window.type === "preset" && window.days != null) {
+    const requestedDays = window.days;
+    for (const longerDays of LONGER_PRESETS) {
+      if (longerDays <= requestedDays) continue;
+      const longerKey: CacheKey = { server, database, windowDays: longerDays };
+      const longerEntry = await getCachedEntry<DataPayload>(longerKey, "qbr_data");
+      if (longerEntry?.data) {
+        const sliced = slicePayloadToShorterWindow(longerEntry.data, requestedDays);
+        if (sliced) return sliced;
+      }
+    }
+  }
+
+  return null;
 }
 
 export { clearCache, clearCacheForClient };
