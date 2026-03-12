@@ -55,7 +55,7 @@ export function VerticalBarChart<T extends object>({
         keys={keys}
         indexBy={nameKey}
         layout="vertical"
-        groupMode={grouped ? "grouped" : "grouped"}
+        groupMode={grouped ? "grouped" : "stacked"}
         margin={{ top: 8, right: 8, bottom: 24, left: 32 }}
         padding={0.3}
         theme={nivoTheme}

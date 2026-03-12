@@ -74,7 +74,7 @@ export function HorizontalBarChart<T extends object>({
         keys={keys}
         indexBy={nameKey}
         layout="horizontal"
-        groupMode={grouped ? "grouped" : "grouped"}
+        groupMode={grouped ? "grouped" : "stacked"}
         margin={{ top: 16, right: 24, bottom: 36, left: yAxisWidth }}
         padding={0.3}
         theme={nivoTheme}

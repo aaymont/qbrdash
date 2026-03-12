@@ -70,16 +70,14 @@ export function VehicleUtilizationDrawer({ distanceKm, drivingSeconds, idlingSec
         </div>
       </div>
       <div style={{ fontSize: 12, color: zenith.neutral500 }}>Time distribution</div>
-      <div style={{ height: 200 }}>
+      <div style={{ height: 220 }}>
         <PieChartCard
-            data={pieData}
-            formatValue={formatHours}
-            outerRadius={70}
-            innerRadius={50}
-            label={({ name, value, pct }) =>
-              value > 0 ? `${name}: ${formatHours(value)}${pct != null ? ` (${pct.toFixed(1)}%)` : ""}` : ""
-            }
-          />
+          data={pieData}
+          formatValue={formatHours}
+          height={220}
+          margin={{ top: 12, right: 12, bottom: 12, left: 12 }}
+          arcLabelFontSize={12}
+        />
       </div>
     </div>
   );
