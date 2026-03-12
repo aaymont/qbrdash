@@ -42,15 +42,15 @@ export function HorizontalBarChart<T extends object>({
   bars,
   yAxisWidth = 80,
   formatValue,
-  showPct = false,
-  pctKey = "pct",
+  showPct: _showPct = false,
+  pctKey: _pctKey = "pct",
 }: HorizontalBarChartProps<T>) {
   const tickFill = zenith.neutral700;
 
   return (
     <AnimatedChart>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ left: yAxisWidth }}>
+        <BarChart data={data} layout="vertical" margin={{ left: yAxisWidth, right: 24 }}>
           {gradientId && (
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
@@ -73,11 +73,7 @@ export function HorizontalBarChart<T extends object>({
               formatValue
                 ? (value, _name, item) => {
                     const payload = item?.payload as T;
-                    const pct =
-                      showPct && payload && (payload[pctKey as keyof T] as number) != null
-                        ? ` (${(payload[pctKey as keyof T] as number).toFixed(1)}%)`
-                        : "";
-                    return formatValue(payload, value) + pct;
+                    return formatValue(payload, value);
                   }
                 : undefined
             }
@@ -91,30 +87,33 @@ export function HorizontalBarChart<T extends object>({
               dataKey={dataKey}
               fill={gradientId ? `url(#${gradientId})` : barFill}
               name={barName ?? dataKey}
+              isAnimationActive={false}
               label={
-                formatValue && showPct
-                  ? (props: { x?: number; y?: number; width?: number; height?: number; value?: unknown; payload?: T }) => {
-                      const { x = 0, y = 0, width = 0, height = 0, value = 0, payload } = props;
-                      const text = formatValue(payload as T, value);
-                      const pct =
-                        payload && (payload[pctKey as keyof T] as number) != null
-                          ? ` (${(payload[pctKey as keyof T] as number).toFixed(1)}%)`
-                          : "";
+                formatValue
+                  ? (props: {
+                      x?: number;
+                      y?: number;
+                      width?: number;
+                      height?: number;
+                      payload?: T;
+                    }) => {
+                      const { x = 0, y = 0, width = 0, height = 0, payload } = props;
+                      if (!payload || width < 40) return <g />;
+                      const value = (payload as Record<string, unknown>)[dataKey];
                       return (
                         <text
-                          x={x + width - 4}
+                          x={x + width - 6}
                           y={y + height / 2}
                           textAnchor="end"
                           dominantBaseline="middle"
                           fill="white"
-                          style={{ fontWeight: 500, fontSize: 12 }}
+                          style={{ fontSize: 12, fontWeight: 500 }}
                         >
-                          {text}
-                          {pct}
+                          {formatValue(payload, value)}
                         </text>
                       );
                     }
-                  : undefined
+                  : false
               }
             />
           )}
