@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { TooltipProps } from "recharts";
 import { formatDuration } from "@/lib/formatters";
 import { zenith } from "@/lib/theme";
 import { DrilldownTable } from "./DrilldownTable";
@@ -11,9 +10,11 @@ import { ChartCard } from "./ui/ChartCard";
 import { VerticalBarChart } from "./charts/VerticalBarChart";
 import type { DataPayload } from "@/features/dataService";
 
-function SafetyChartTooltip({ active, payload, label }: TooltipProps<number, string>) {
-  if (!active || !payload?.length || !label) return null;
-  const row = payload[0]?.payload as { name: string; count: number; duration: number };
+function SafetyChartTooltip({
+  entry,
+}: {
+  entry: { name: string; count: number; duration: number };
+}) {
   return (
     <div
       style={{
@@ -25,9 +26,9 @@ function SafetyChartTooltip({ active, payload, label }: TooltipProps<number, str
         fontSize: 13,
       }}
     >
-      <div style={{ fontWeight: 600, marginBottom: 4, color: zenith.neutral900 }}>{row.name}</div>
+      <div style={{ fontWeight: 600, marginBottom: 4, color: zenith.neutral900 }}>{entry.name}</div>
       <div style={{ color: zenith.neutral500 }}>
-        {row.count} event{row.count !== 1 ? "s" : ""} · {formatDuration(row.duration)}
+        {entry.count} event{entry.count !== 1 ? "s" : ""} · {formatDuration(entry.duration)}
       </div>
     </div>
   );

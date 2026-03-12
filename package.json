@@ -1,7 +1,7 @@
 {
   "name": "geotab-qbr-insights-dashboard",
   "private": true,
-  "version": "1.4.4",
+  "version": "1.4.9",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,13 +11,16 @@
   },
   "dependencies": {
     "@geotab/zenith": "^3.6.3",
+    "@nivo/bar": "^0.99.0",
+    "@nivo/core": "^0.99.0",
+    "@nivo/line": "^0.99.0",
+    "@nivo/pie": "^0.99.0",
     "dexie": "^4.0.8",
     "framer-motion": "^12.35.2",
     "mg-api-js": "^3.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.0.1",
-    "recharts": "^2.14.1"
+    "react-router-dom": "^7.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { ResponsiveLine } from "@nivo/line";
 import { zenith } from "@/lib/theme";
+import { nivoTheme } from "@/lib/nivoTheme";
 import type { FaultAggregates } from "@/features/maintenance/faultsPipeline";
 import type { FaultDataRecord } from "@/features/maintenance/faultsPipeline";
 
@@ -94,14 +95,35 @@ export function VehicleFaultDetail({ deviceData, rawFaults }: VehicleFaultDetail
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: zenith.neutral900 }}>Fault trend</div>
           <div style={{ height: 120 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData}>
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                <YAxis width={24} tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Area type="monotone" dataKey="count" stroke="#9c27b0" fill="#9c27b0" fillOpacity={0.4} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <ResponsiveLine
+              data={[
+                {
+                  id: "count",
+                  data: trendData.map(({ date, count }) => ({ x: date, y: count })),
+                },
+              ]}
+              theme={nivoTheme}
+              margin={{ top: 8, right: 8, bottom: 24, left: 28 }}
+              xScale={{ type: "point" }}
+              yScale={{ type: "linear" }}
+              axisBottom={{
+                tickSize: 0,
+                tickPadding: 4,
+                tickRotation: -45,
+              }}
+              axisLeft={{
+                tickSize: 0,
+                tickPadding: 4,
+              }}
+              enableArea
+              areaOpacity={0.4}
+              colors={["#9c27b0"]}
+              lineWidth={2}
+              pointSize={0}
+              enableGridX={false}
+              enableGridY
+              useMesh
+            />
           </div>
         </div>
       )}

@@ -228,8 +228,14 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
       </ChartCard>
 
       <SectionTitle>Time distribution (driving vs idle)</SectionTitle>
-      <ChartCard height={240}>
-        <PieChartCard data={pieData} formatValue={formatHours} />
+      <ChartCard height={480}>
+        <PieChartCard
+          data={pieData}
+          formatValue={formatHours}
+          height={400}
+          margin={{ bottom: 8 }}
+          arcLabelFontSize={16}
+        />
       </ChartCard>
 
       <SectionTitle>Vehicle utilization</SectionTitle>

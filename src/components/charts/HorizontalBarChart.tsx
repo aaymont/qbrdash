@@ -1,13 +1,7 @@
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { ResponsiveBar } from "@nivo/bar";
+import { linearGradientDef } from "@nivo/core";
 import { AnimatedChart } from "../Animated";
+import { nivoTheme } from "@/lib/nivoTheme";
 import { zenith } from "@/lib/theme";
 
 export interface BarConfig {
@@ -42,83 +36,99 @@ export function HorizontalBarChart<T extends object>({
   bars,
   yAxisWidth = 80,
   formatValue,
-  showPct: _showPct = false,
-  pctKey: _pctKey = "pct",
 }: HorizontalBarChartProps<T>) {
-  const tickFill = zenith.neutral700;
+  const keys = bars ? bars.map((b) => b.dataKey) : [dataKey];
+  const grouped = !!bars;
+
+  const defs = gradientId
+    ? [
+        linearGradientDef(
+          gradientId,
+          [
+            { offset: 0, color: "#d32f2f" },
+            { offset: 100, color: "#2e7d32" },
+          ],
+          { x1: 0, x2: 1, y1: 0, y2: 0 }
+        ),
+      ]
+    : undefined;
+
+  const fill = gradientId && !grouped ? [{ match: { id: dataKey }, id: gradientId }] : undefined;
+
+  const getBarColor = grouped
+    ? (bar: { id: string | number }) => bars!.find((b) => b.dataKey === String(bar.id))?.fill ?? barFill
+    : gradientId
+      ? () => `url(#${gradientId})`
+      : barFill;
+
+  const formatAxisValue = (v: number) => (unit ? `${v}${unit}` : `${v}`);
+  const formatTooltipValue = (value: number, payload: T) =>
+    formatValue ? formatValue(payload, value) : formatAxisValue(value);
+
+  const displayData = [...data].reverse() as Record<string, string | number>[];
 
   return (
     <AnimatedChart>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ left: yAxisWidth, right: 24 }}>
-          {gradientId && (
-            <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#d32f2f" />
-                <stop offset="100%" stopColor="#2e7d32" />
-              </linearGradient>
-            </defs>
-          )}
-          <CartesianGrid strokeDasharray="3 3" stroke={zenith.neutral100} />
-          <XAxis type="number" unit={unit} tick={{ fill: tickFill }} />
-          <YAxis
-            type="category"
-            dataKey={nameKey}
-            width={yAxisWidth}
-            interval={0}
-            tick={{ fill: tickFill }}
-          />
-          <Tooltip
-            formatter={
-              formatValue
-                ? (value, _name, item) => {
-                    const payload = item?.payload as T;
-                    return formatValue(payload, value);
-                  }
-                : undefined
-            }
-          />
-          {bars ? (
-            bars.map((b) => (
-              <Bar key={b.dataKey} dataKey={b.dataKey} fill={b.fill} name={b.name} />
-            ))
-          ) : (
-            <Bar
-              dataKey={dataKey}
-              fill={gradientId ? `url(#${gradientId})` : barFill}
-              name={barName ?? dataKey}
-              isAnimationActive={false}
-              label={
-                formatValue
-                  ? (props: {
-                      x?: number;
-                      y?: number;
-                      width?: number;
-                      height?: number;
-                      payload?: T;
-                    }) => {
-                      const { x = 0, y = 0, width = 0, height = 0, payload } = props;
-                      if (!payload || width < 40) return <g />;
-                      const value = (payload as Record<string, unknown>)[dataKey];
-                      return (
-                        <text
-                          x={x + width - 6}
-                          y={y + height / 2}
-                          textAnchor="end"
-                          dominantBaseline="middle"
-                          fill="white"
-                          style={{ fontSize: 12, fontWeight: 500 }}
-                        >
-                          {formatValue(payload, value)}
-                        </text>
-                      );
-                    }
-                  : false
+      <ResponsiveBar
+        data={displayData}
+        keys={keys}
+        indexBy={nameKey}
+        layout="horizontal"
+        groupMode={grouped ? "grouped" : "grouped"}
+        margin={{ top: 16, right: 24, bottom: 36, left: yAxisWidth }}
+        padding={0.3}
+        theme={nivoTheme}
+        defs={defs}
+        fill={fill}
+        colors={getBarColor}
+        enableGridX
+        enableGridY={false}
+        axisTop={null}
+        axisRight={null}
+        axisBottom={{
+          tickSize: 0,
+          tickPadding: 8,
+          format: formatAxisValue,
+        }}
+        axisLeft={{
+          tickSize: 0,
+          tickPadding: 8,
+        }}
+        enableLabel={!grouped}
+        labelTextColor="#ffffff"
+        label={
+          !grouped && formatValue
+            ? (d) => {
+                const row = displayData[d.index] as T;
+                const val = (row as Record<string, unknown>)[d.id] as number;
+                if (val == null) return "";
+                const barWidth = "width" in d && typeof (d as { width?: number }).width === "number"
+                  ? (d as { width: number }).width
+                  : 999;
+                if (barWidth < 40) return "";
+                return formatValue(row, val);
               }
-            />
-          )}
-        </BarChart>
-      </ResponsiveContainer>
+            : undefined
+        }
+        tooltip={({ id, value, indexValue, data: row }) => {
+          const payload = displayData.find((r) => (r as Record<string, unknown>)[nameKey] === indexValue) ?? row;
+          const barLabel = bars?.find((b) => b.dataKey === id)?.name ?? barName ?? (id as string);
+          return (
+            <div
+              style={{
+                background: "white",
+                padding: "8px 12px",
+                borderRadius: 6,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                fontSize: 13,
+                border: `1px solid ${zenith.neutral100}`,
+              }}
+            >
+              <strong>{indexValue}</strong>: {barLabel} {formatTooltipValue(value as number, payload as T)}
+            </div>
+          );
+        }}
+      />
     </AnimatedChart>
   );
 }
