@@ -130,15 +130,36 @@ export interface UtilizationAggregates {
   rawTrips: TripRecord[];
   /** Daily KPI rows from Data Connector (Local_Date, DeviceId, etc.). Used for slicing when rawTrips is empty. */
   rawDailyRows?: Array<Record<string, unknown>>;
+  /** Data source: "odata" = accurate from Data Connector; "trip" = approximate from Trip API fallback. */
+  utilizationSource?: "odata" | "trip";
+}
+
+/**
+ * Trip.EngineHours unit varies by database: seconds (Geotab StatusData convention) or hours (API docs).
+ * If value < 10000, likely hours; else seconds. Returns seconds.
+ */
+function normalizeEngineHours(value: number): number {
+  if (value <= 0) return 0;
+  if (value >= 10000) return value; // assume seconds
+  if (value < 1000) return value * 3600; // assume hours (e.g. 0.5)
+  return value; // ambiguous 1000-10000: treat as seconds
 }
 
 function parseEngineHours(v: unknown): number {
   if (v == null) return 0;
   const n = typeof v === "number" ? v : parseFloat(String(v));
-  return !Number.isNaN(n) && n >= 0 ? n : 0;
+  const raw = !Number.isNaN(n) && n >= 0 ? n : 0;
+  return normalizeEngineHours(raw);
 }
 
-export function aggregateTrips(trips: TripRecord[]): UtilizationAggregates {
+/**
+ * @param trips - Trip records to aggregate
+ * @param engineDeltasByTripId - Optional map of trip id -> engine delta seconds (from StatusData). Overrides Trip.engineHours when provided.
+ */
+export function aggregateTrips(
+  trips: TripRecord[],
+  engineDeltasByTripId?: Map<string, number>
+): UtilizationAggregates {
   const byDevice: UtilizationAggregates["byDevice"] = {};
   const sorted = [...trips].sort((a, b) => {
     const devA = a.device?.id ?? "";
@@ -167,27 +188,51 @@ export function aggregateTrips(trips: TripRecord[]): UtilizationAggregates {
     const deviceId = t.device?.id ?? "unknown";
     const dist = t.distance ?? 0;
     const raw = t as unknown as Record<string, unknown>;
-    // Geotab defines Driving as "excluding idle" (Data Connector DriveDuration_Seconds).
-    // Trip.DrivingDuration = "between start and stop" (wall clock) — can include in-trip idle.
-    // When we have EngineHours: engine = driving + idle. Use driving = engine − idle.
+    // OData: DriveDuration = driving-only, IdleDuration = idle. Trip API: DrivingDuration = wall
+    // clock (start-stop), includes idle. IdlingDuration often 0. engineHours = driving + idle.
     let driving = parseDuration(raw.drivingDuration ?? raw.DrivingDuration);
     let idling = parseDuration(raw.idlingDuration ?? raw.IdlingDuration);
+    const tripEngineDelta = engineDeltasByTripId?.get(t.id);
     const engineSeconds = parseEngineHours(raw.engineHours ?? raw.EngineHours);
     const prevEngineSec = prevEngineHoursByDevice.get(deviceId);
-    if (prevEngineSec != null && engineSeconds > prevEngineSec) {
-      const engineDeltaSeconds = engineSeconds - prevEngineSec;
+    const engineDeltaSeconds =
+      tripEngineDelta ??
+      (prevEngineSec != null && engineSeconds > prevEngineSec ? engineSeconds - prevEngineSec : 0);
+
+    if (engineDeltaSeconds > 0) {
+      driving = Math.min(driving, engineDeltaSeconds);
       if (idling <= 0) {
         const derivedIdle = Math.max(0, engineDeltaSeconds - driving);
         idling = Math.min(derivedIdle, driving * 10, 86400);
       }
       driving = Math.max(0, Math.min(engineDeltaSeconds - idling, engineDeltaSeconds));
     }
-    if (engineSeconds > 0) prevEngineHoursByDevice.set(deviceId, engineSeconds);
+
+    if (!tripEngineDelta && engineSeconds > 0) prevEngineHoursByDevice.set(deviceId, engineSeconds);
+
+    // Distance-based idle estimate when no engine and no Trip.idlingDuration
+    if (idling <= 0 && engineDeltaSeconds <= 0 && t.start && t.stop && dist > 0) {
+      const startMs = new Date(t.start).getTime();
+      const stopMs = new Date(t.stop).getTime();
+      const wallClockSec =
+        !Number.isNaN(startMs) && !Number.isNaN(stopMs) && stopMs > startMs
+          ? (stopMs - startMs) / 1000
+          : 0;
+      if (wallClockSec > 0) {
+        const avgSpeedKmh = t.averageSpeed ?? (dist / (wallClockSec / 3600)) ?? 10;
+        const minSpeed = Math.max(avgSpeedKmh, 5);
+        const drivingEstSec = (dist / minSpeed) * 3600;
+        const idleEstSec = Math.max(0, wallClockSec - drivingEstSec);
+        idling = Math.min(idleEstSec, wallClockSec * 0.9);
+        driving = Math.max(0, wallClockSec - idling);
+      }
+    }
+
     if (driving <= 0 && t.start && t.stop) {
       const startMs = new Date(t.start).getTime();
       const stopMs = new Date(t.stop).getTime();
       if (!Number.isNaN(startMs) && !Number.isNaN(stopMs) && stopMs > startMs) {
-        driving = (stopMs - startMs) / 1000; // fallback when no engine data
+        driving = (stopMs - startMs) / 1000;
       }
     }
     const stop = parseDuration(raw.stopDuration ?? raw.StopDuration);
@@ -265,6 +310,7 @@ export function aggregateTrips(trips: TripRecord[]): UtilizationAggregates {
     byDevice,
     rawTrips: trips,
     rawDailyRows: undefined,
+    utilizationSource: "trip",
   };
 }
 

@@ -182,6 +182,18 @@ export function UtilizationTab({ data }: { data: DataPayload }) {
 
   return (
     <div>
+      {u.utilizationSource === "trip" && (
+        <p
+          style={{
+            fontSize: 13,
+            color: zenith.neutral500,
+            marginBottom: zenith.spacing,
+            fontFamily: zenith.fontFamily,
+          }}
+        >
+          Driving and idle times are approximate (no Data Connector).
+        </p>
+      )}
       <KpiGrid variant="flex">
         <KpiTile
           title="Total distance"

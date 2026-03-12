@@ -23,6 +23,7 @@ import {
   aggregateFromDailyRows,
   type DataConnectorCredentials,
 } from "@/features/utilization/dataConnectorPipeline";
+import { fetchEngineHoursByTrip } from "@/features/utilization/statusDataPipeline";
 export interface DateWindow {
   type: "preset" | "custom";
   days?: number;
@@ -123,6 +124,10 @@ function slicePayloadToShorterWindow(
   }));
   const safety = aggregateSafety(filteredExceptions, rulesFromNames, speedProxy);
 
+  if (utilization.utilizationSource === "trip") {
+    utilization = mergeIdlingFromExceptions(utilization, filteredExceptions, rulesFromNames);
+  }
+
   const rawFaults = (payload.faults?.rawFaults ?? []) as FaultDataRecord[];
   const filteredFaults = rawFaults.filter((f) => {
     const ms = f.dateTime ? new Date(f.dateTime).getTime() : 0;
@@ -140,6 +145,144 @@ function slicePayloadToShorterWindow(
     cachedAt: payload.cachedAt,
     expiresAt: payload.expiresAt,
   };
+}
+
+/** Parses Geotab TimeSpan string "d.hh:mm:ss.fffffff" or "hh:mm:ss" into total seconds. */
+function parseTimeSpanString(s: string): number {
+  const trimmed = s.trim();
+  if (!trimmed) return 0;
+  const asNum = parseFloat(trimmed);
+  if (!Number.isNaN(asNum)) return asNum;
+  const dotIdx = trimmed.indexOf(".");
+  let days = 0;
+  let timeStr = trimmed;
+  if (dotIdx > 0) {
+    days = parseInt(trimmed.slice(0, dotIdx), 10) || 0;
+    timeStr = trimmed.slice(dotIdx + 1);
+  }
+  const parts = timeStr.split(":");
+  if (parts.length < 3) return days * 86400;
+  const h = parseInt(parts[0] ?? "0", 10) || 0;
+  const m = parseInt(parts[1] ?? "0", 10) || 0;
+  const secFrac = parseFloat(parts[2] ?? "0") || 0;
+  return days * 86400 + h * 3600 + m * 60 + secFrac;
+}
+
+function parseExceptionDuration(d: unknown): number {
+  if (d == null) return 0;
+  if (typeof d === "number" && !Number.isNaN(d)) return d;
+  if (typeof d === "object" && d !== null) {
+    const o = d as Record<string, unknown>;
+    const sec = (o.totalSeconds as number) ?? (o.TotalSeconds as number);
+    if (typeof sec === "number") return sec;
+    const ticks = o.ticks as number | undefined;
+    if (typeof ticks === "number") return ticks / 10_000_000;
+  }
+  if (typeof d === "string" && d) {
+    const parsed = parseTimeSpanString(d);
+    if (parsed >= 0) return parsed;
+  }
+  return 0;
+}
+
+function getExceptionDurationSeconds(ex: ExceptionEventRecord): number {
+  const dur = parseExceptionDuration(ex.duration);
+  if (dur > 0) return dur;
+  const from = ex.activeFrom ? new Date(ex.activeFrom).getTime() : NaN;
+  const to = ex.activeTo ? new Date(ex.activeTo).getTime() : from;
+  if (!Number.isNaN(from) && !Number.isNaN(to) && to >= from) {
+    return (to - from) / 1000;
+  }
+  return 0;
+}
+
+const RULE_IDLING_ID = "RuleIdlingId";
+
+/** Merge idling time from ExceptionEvents (idling rules) into utilization when using Trip API fallback. */
+function mergeIdlingFromExceptions(
+  utilization: UtilizationAggregates,
+  exceptions: ExceptionEventRecord[],
+  rules: Array<{ id: string; name: string }>
+): UtilizationAggregates {
+  const idlingRuleIds = new Set(
+    rules
+      .filter((r) => r.id === RULE_IDLING_ID || r.name.toLowerCase().includes("idle"))
+      .map((r) => r.id)
+  );
+  idlingRuleIds.add(RULE_IDLING_ID);
+
+  const idleSecondsByDevice = new Map<string, number>();
+  for (const ex of exceptions) {
+    if (!idlingRuleIds.has(ex.rule?.id ?? "")) continue;
+    const deviceId = ex.device?.id ?? "unknown";
+    const dur = getExceptionDurationSeconds(ex);
+    idleSecondsByDevice.set(deviceId, (idleSecondsByDevice.get(deviceId) ?? 0) + dur);
+  }
+  if (idleSecondsByDevice.size === 0) return utilization;
+
+  const byDevice = { ...utilization.byDevice };
+  for (const [deviceId, sec] of idleSecondsByDevice) {
+    if (byDevice[deviceId]) {
+      byDevice[deviceId] = { ...byDevice[deviceId], idlingSeconds: sec };
+    } else {
+      byDevice[deviceId] = {
+        distanceKm: 0,
+        drivingSeconds: 0,
+        idlingSeconds: sec,
+        stopSeconds: 0,
+        afterHoursDistanceKm: 0,
+        tripCount: 0,
+        speedProxySeconds: 0,
+        daysUsed: 0,
+      };
+    }
+  }
+  const totalIdlingSeconds = Object.values(byDevice).reduce((sum, e) => sum + e.idlingSeconds, 0);
+
+  if (import.meta.env.DEV) {
+    const devicesWithIdle = [...idleSecondsByDevice.entries()].filter(([, s]) => s > 0);
+    console.debug("[idling] rules:", [...idlingRuleIds], "exceptions:", exceptions.filter((e) => idlingRuleIds.has(e.rule?.id ?? "")).length, "devicesWithIdle:", devicesWithIdle.length, "totalIdlingSec:", totalIdlingSeconds);
+    if (devicesWithIdle.length > 0) {
+      const sample = devicesWithIdle[0];
+      const sampleEx = exceptions.find((e) => idlingRuleIds.has(e.rule?.id ?? "") && (e.device?.id ?? "") === sample[0]);
+      if (sampleEx) {
+        console.debug("[idling] sample duration raw:", sampleEx.duration, "parsed:", getExceptionDurationSeconds(sampleEx));
+      }
+    }
+  }
+
+  return {
+    ...utilization,
+    totalIdlingSeconds,
+    byDevice,
+  };
+}
+
+/** When Trip.engineHours is missing for many trips, fetch StatusData engine hours and pass to aggregation. */
+async function aggregateTripsWithEngineFallback(
+  api: GeotabApiWrapper,
+  trips: TripRecord[],
+  onProgress?: (phase: string, current: number, total: number) => void
+): Promise<UtilizationAggregates> {
+  const withDistance = trips.filter((t) => (t.distance ?? 0) > 0);
+  const missingEngine = withDistance.filter((t) => {
+    const raw = t as unknown as Record<string, unknown>;
+    const v = raw.engineHours ?? raw.EngineHours;
+    return v == null || (typeof v === "number" && v <= 0);
+  });
+  const fraction = withDistance.length > 0 ? missingEngine.length / withDistance.length : 0;
+
+  let engineDeltas: Map<string, number> | undefined;
+  if (fraction > 0.3) {
+    onProgress?.("engineHours", 0, 1);
+    try {
+      engineDeltas = await fetchEngineHoursByTrip(api, trips);
+    } catch (e) {
+      console.warn("StatusData engine hours fallback failed:", e);
+    }
+  }
+
+  return aggregateTrips(trips, engineDeltas);
 }
 
 /** Returns end of previous day (23:59:59.999) so we exclude current day data. */
@@ -182,7 +325,7 @@ export async function loadData(
   const { from, to } = getDateRange(window);
 
   onProgress?.("devices", 0, 1);
-  const rulePatterns = ["%Speeding%", "%Harsh%", "%Harsh%Acceleration%", "%Harsh%Braking%", "%Harsh%Cornering%"];
+  const rulePatterns = ["%Speeding%", "%Harsh%", "%Harsh%Acceleration%", "%Harsh%Braking%", "%Harsh%Cornering%", "%Idle%"];
   const batchCalls: [string, Record<string, unknown>][] = [
     [
       "Get",
@@ -200,6 +343,7 @@ export async function loadData(
         resultsLimit: 100,
       },
     ] as [string, Record<string, unknown>]),
+    ["Get", { typeName: "Rule", search: { id: "RuleIdlingId" } }],
   ];
   const batchResults = await api.multiCall<Array<{ id: string; name: string }> | Array<{ id: string; name: string }>>(batchCalls);
   const devicesRaw = batchResults[0];
@@ -210,12 +354,11 @@ export async function loadData(
   const seenRules = new Set<string>();
   for (let i = 1; i < batchResults.length; i++) {
     const r = batchResults[i];
-    if (Array.isArray(r)) {
-      for (const rule of r) {
-        if (rule?.id && !seenRules.has(rule.id)) {
-          seenRules.add(rule.id);
-          rules.push(rule);
-        }
+    const arr = Array.isArray(r) ? r : r ? [r] : [];
+    for (const rule of arr) {
+      if (rule?.id && !seenRules.has(rule.id)) {
+        seenRules.add(rule.id);
+        rules.push({ id: rule.id, name: rule.name ?? "Idling" });
       }
     }
   }
@@ -237,16 +380,19 @@ export async function loadData(
       const trips = await fetchTrips(api, from, to, (c, t) =>
         onProgress?.("trips", c, t)
       );
-      utilization = aggregateTrips(trips);
+      utilization = await aggregateTripsWithEngineFallback(api, trips, onProgress);
     }
   } else {
     const trips = await fetchTrips(api, from, to, (c, t) =>
       onProgress?.("trips", c, t)
     );
-    utilization = aggregateTrips(trips);
+    utilization = await aggregateTripsWithEngineFallback(api, trips, onProgress);
   }
 
-  const ruleIds = rules.map((r) => r.id);
+  let ruleIds = rules.map((r) => r.id);
+  if (!ruleIds.includes("RuleIdlingId")) {
+    ruleIds = [...ruleIds, "RuleIdlingId"];
+  }
   onProgress?.("safety", 0, ruleIds.length);
   const exceptions = await fetchExceptionEvents(
     api,
@@ -262,6 +408,10 @@ export async function loadData(
       utilization.speedRange2DurationSeconds +
       utilization.speedRange3DurationSeconds
   );
+
+  if (utilization.utilizationSource === "trip") {
+    utilization = mergeIdlingFromExceptions(utilization, exceptions, rules);
+  }
 
   onProgress?.("faults", 0, 1);
   const [faultsAll, recentFaults] = await Promise.all([

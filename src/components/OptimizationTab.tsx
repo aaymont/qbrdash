@@ -47,6 +47,18 @@ export function OptimizationTab({ data }: { data: DataPayload }) {
 
   return (
     <div>
+      {u.utilizationSource === "trip" && (
+        <p
+          style={{
+            fontSize: 13,
+            color: zenith.neutral500,
+            marginBottom: zenith.spacing,
+            fontFamily: zenith.fontFamily,
+          }}
+        >
+          Driving and idle times are approximate (no Data Connector).
+        </p>
+      )}
       <KpiGrid>
         <KpiTile title="Idle %" value={`${idlePct.toFixed(1)}%`} index={0} />
         <KpiTile title="Idle time" value={formatHours(u.totalIdlingSeconds)} index={1} />

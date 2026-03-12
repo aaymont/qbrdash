@@ -166,6 +166,7 @@ function emptyAggregates(): UtilizationAggregates {
     byDevice: {},
     rawTrips: [],
     rawDailyRows: [],
+    utilizationSource: "odata",
   };
 }
 
