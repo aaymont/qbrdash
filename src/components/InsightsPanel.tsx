@@ -17,10 +17,12 @@ interface Action {
 interface InsightsPanelProps {
   insights: Insight[];
   actions: Action[];
+  /** When true, panel is hidden (display: none) but not removed. */
+  hidden?: boolean;
 }
 
-export function InsightsPanel({ insights, actions }: InsightsPanelProps) {
-  return (
+export function InsightsPanel({ insights, actions, hidden }: InsightsPanelProps) {
+  const content = (
     <div
       style={{
         padding: zenith.spacing,
@@ -143,4 +145,5 @@ export function InsightsPanel({ insights, actions }: InsightsPanelProps) {
       </div>
     </div>
   );
+  return hidden ? <div style={{ display: "none" }}>{content}</div> : content;
 }

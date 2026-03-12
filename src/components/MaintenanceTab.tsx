@@ -90,7 +90,7 @@ export function MaintenanceTab({ data }: { data: DataPayload }) {
       />
 
       <div style={{ marginTop: zenith.spacingLg }}>
-        <InsightsPanel insights={insights} actions={actions} />
+        <InsightsPanel insights={insights} actions={actions} hidden />
       </div>
 
       <DetailDrawer

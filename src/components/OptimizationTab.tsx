@@ -81,7 +81,7 @@ export function OptimizationTab({ data }: { data: DataPayload }) {
       </ChartCard>
 
       <div style={{ marginTop: zenith.spacingLg }}>
-        <InsightsPanel insights={insights} actions={actions} />
+        <InsightsPanel insights={insights} actions={actions} hidden />
       </div>
     </div>
   );
